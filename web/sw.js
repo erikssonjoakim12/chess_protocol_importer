@@ -5,13 +5,13 @@
 // Network first: online, the newest files are always used (and stored);
 // offline, the stored copy is used. Bump VERSION when files are added or
 // removed, so old copies are cleaned up.
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = "protokoll-" + VERSION;
 const NETWORK_TIMEOUT_MS = 4000;
 
 const PIECES = ["K", "Q", "R", "B", "N", "P"].flatMap((p) => ["w" + p, "b" + p]).map((c) => `pieces/${c}.svg`);
 const ASSETS = [
-  "./", "index.html", "style.css", "app.js", "settings.js", "lichess.js", "games.js", "photos.js", "demo.json", "manifest.webmanifest",
+  "./", "index.html", "bulk.html", "style.css", "app.js", "bulk.js", "settings.js", "key.js", "ui.js", "lichess.js", "games.js", "photos.js", "demo.json", "manifest.webmanifest",
   "core/gemini.js", "core/notation.js", "core/notations.js", "core/pgn.js", "core/pipeline.js", "core/reading.js", "core/resolver.js", "core/grouping.js", "core/studies.js",
   "vendor/chess.js",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png",

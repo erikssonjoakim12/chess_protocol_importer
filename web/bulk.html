@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bulk import · Protokoll → PGN</title>
+  <meta name="theme-color" content="#2f6f4f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Bulk import</h1>
+      <p class="tagline">Many scoresheets at once, into your Lichess studies. <a href="./">← One game</a></p>
+    </div>
+  </header>
+
+  <main>
+    <nav class="steps-bar" id="steps-bar">
+      <button data-step="photos">1. Photos</button>
+      <button data-step="read">2. Reading</button>
+      <button data-step="check">3. Check</button>
+      <button data-step="studies">4. Studies</button>
+    </nav>
+
+    <p id="bulk-error" class="error" hidden></p>
+
+    <!-- 1. Photos -->
+    <section id="step-photos" class="card step" hidden>
+      <h2>Photos of the scoresheets</h2>
+      <p class="muted small-text">Up to 15 games (40 photos). Games on two or more pages: add all the pages; the app
+        works out which pages belong together, and you can fix it. Photos are kept on this device until the game is
+        in a study.</p>
+      <label id="bulk-dropzone" class="dropzone">
+        <input id="bulk-files" type="file" accept="image/*" multiple hidden>
+        <span class="dz-main">Drop photos here or <u>choose files</u></span>
+        <span class="muted">Ordered by when they were taken.</span>
+      </label>
+      <label class="camera-btn" title="Open the camera; take one photo after another">
+        <input id="bulk-camera" type="file" accept="image/*" capture="environment" hidden>
+        📷 Take a photo (repeat for each page)
+      </label>
+      <p class="muted small-text photo-tip">Tip: the sheet the right way up, filling the picture, good light.</p>
+      <ol id="bulk-thumbs" class="thumbs"></ol>
+      <div class="actions">
+        <button id="bulk-read" class="primary" disabled>Read all</button>
+        <span id="bulk-photo-count" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- 2. Reading and grouping -->
+    <section id="step-read" class="card step" hidden>
+      <h2>Reading</h2>
+      <p id="read-progress" class="muted"></p>
+      <div class="actions">
+        <button id="read-continue" class="primary" hidden>Continue reading</button>
+        <button id="read-stop" hidden>Pause</button>
+      </div>
+      <div id="grouping" hidden>
+        <h2>Which pages belong together</h2>
+        <p class="muted small-text">The app's suggestion. Use the buttons between photos to join a page to the game
+          before it, or to start a new game.</p>
+        <div id="group-list" class="group-list"></div>
+        <div class="actions">
+          <button id="make-games" class="primary">These are the games →</button>
+          <span id="group-count" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Check -->
+    <section id="step-check" class="card step" hidden>
+      <h2>Check the games</h2>
+      <p class="muted small-text">Open each game that has something to check. When every game is ready, continue to
+        the studies.</p>
+      <ul id="check-list" class="saved-list"></ul>
+      <div class="actions">
+        <button id="to-studies" class="primary" disabled>Continue to studies →</button>
+        <span id="check-status" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- 4. Studies -->
+    <section id="step-studies" class="card step" hidden>
+      <h2>Studies</h2>
+      <div id="studies-login" hidden>
+        <p>Log in with Lichess to add the games to your studies.</p>
+        <button id="bulk-login" class="primary" type="button">Log in with Lichess</button>
+      </div>
+      <div id="studies-form" hidden>
+        <div class="actions">
+          <label class="inline">Suggest
+            <select id="study-mode">
+              <option value="event">one study per event</option>
+              <option value="single">one study for all games</option>
+            </select>
+          </label>
+          <input id="single-name" type="text" value="Imported games" maxlength="100" hidden>
+          <button id="resuggest" class="small" type="button">Suggest again</button>
+        </div>
+        <div id="study-blocks"></div>
+        <div class="actions">
+          <button id="send-all" class="primary">Add all to Lichess</button>
+          <span id="send-status" class="muted"></span>
+        </div>
+      </div>
+    </section>
+
+    <p class="actions"><button id="clear-batch" class="link" type="button">Delete this batch and its photos</button>
+      <span id="storage-use" class="muted small-text"></span></p>
+  </main>
+
+  <script type="module" src="bulk.js"></script>
+</body>
+</html>

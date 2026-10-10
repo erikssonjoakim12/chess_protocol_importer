@@ -1,26 +1,10 @@
 // The user's own Gemini key: asked for once, kept in this browser only.
 import { checkKey } from "./core/gemini.js";
+import { getKey, setKey } from "./key.js";
 
-const KEY_STORE = "protokoll-gemini-key";
 const $ = (sel) => document.querySelector(sel);
 
-export function getKey() {
-  try {
-    return localStorage.getItem(KEY_STORE) || "";
-  } catch {
-    return "";  // storage blocked (e.g. some private-browsing modes)
-  }
-}
-
-function setKey(key) {
-  try {
-    if (key) localStorage.setItem(KEY_STORE, key);
-    else localStorage.removeItem(KEY_STORE);
-    return true;
-  } catch {
-    return false;
-  }
-}
+export { getKey };
 
 const panel = $("#settings");
 const input = $("#key-input");

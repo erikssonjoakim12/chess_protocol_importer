@@ -9,6 +9,7 @@ import { getKey } from "./settings.js";
 import { deleteGame, gameRecord, gameTitle as titleOf, getGame, loadGames, newGameId, putGame } from "./games.js";
 import { deletePhotos, getPhotos } from "./photos.js";
 import { chapterName } from "./core/studies.js";
+import { $, downscale, el, rotateQuarter } from "./ui.js";
 import { account, addToStudy, createStudy, finishLogin, login, logout, myStudies } from "./lichess.js";
 
 // ---------- State ----------
@@ -25,8 +26,6 @@ const state = {
   lichess: null,     // {url, pgn}: the Lichess game made from this PGN
 };
 
-const MAX_SIDE = 2400;     // downscale photos to this many pixels on the long side
-const JPEG_QUALITY = 0.88;
 
 const TAG_FIELDS = [
   ["event", "Event"], ["site", "Site"], ["date", "Date (YYYY.MM.DD)"],
@@ -37,20 +36,6 @@ const TAG_FIELDS = [
 ];
 const RESULTS = ["1-0", "0-1", "1/2-1/2", "*"];
 
-const $ = (sel) => document.querySelector(sel);
-const el = (tag, attrs = {}, ...children) => {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === "class") node.className = v;
-    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
-    else if (v !== undefined && v !== null && v !== false) node.setAttribute(k, v === true ? "" : v);
-  }
-  for (const c of children.flat()) {
-    if (c === null || c === undefined || c === false) continue;
-    node.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  }
-  return node;
-};
 
 // ---------- Step 1: photos ----------
 const fileInput = $("#file-input");
@@ -77,20 +62,6 @@ async function addFiles(files) {
   renderThumbs();
 }
 
-async function downscale(file) {
-  try {
-    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    return await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", JPEG_QUALITY));
-  } catch (e) {
-    console.warn("Could not downscale, sending original", e);
-    return file;
-  }
-}
 
 function renderThumbs() {
   const list = $("#thumbs");
@@ -116,15 +87,7 @@ function movePhoto(i, delta) {
 /** Turn a photo a quarter turn clockwise (for photos taken sideways). */
 async function rotatePhoto(i) {
   const photo = state.photos[i];
-  const bitmap = await createImageBitmap(photo.blob);
-  const canvas = document.createElement("canvas");
-  canvas.width = bitmap.height;
-  canvas.height = bitmap.width;
-  const ctx = canvas.getContext("2d");
-  ctx.translate(canvas.width, 0);
-  ctx.rotate(Math.PI / 2);
-  ctx.drawImage(bitmap, 0, 0);
-  const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", JPEG_QUALITY));
+  const blob = await rotateQuarter(photo.blob);
   URL.revokeObjectURL(photo.url);
   state.photos[i] = { ...photo, blob, url: URL.createObjectURL(blob) };
   renderThumbs();
@@ -295,6 +258,7 @@ const openIssues = () => (state.res ? state.res.counts.check + state.res.counts.
 const isReady = () => state.res && state.res.complete && openIssues() === 0;
 
 function renderSummary() {
+  if (typeof renderBulkBar === "function" && bulkParams.get("bulk")) setTimeout(renderBulkBar, 500);
   const c = state.res.counts;
   const box = $("#summary");
   const ready = isReady();
@@ -1104,3 +1068,34 @@ finishLogin().then((result) => {
     $("#settings").hidden = false;
   }
 });
+
+// ---------- Coming from bulk import ----------
+// bulk.html opens games here as ./?game=<id>&bulk=1. The bar on top leads to
+// the next game that still needs checking, or back to the bulk page.
+const BATCH_KEY = "protokoll-batch-v1";
+const bulkParams = new URLSearchParams(location.search);
+
+function bulkBatch() {
+  try { return JSON.parse(localStorage.getItem(BATCH_KEY)); } catch { return null; }
+}
+
+function renderBulkBar() {
+  const bar = $("#bulk-bar");
+  const batch = bulkBatch();
+  if (!bulkParams.get("bulk") || !batch || !batch.games.includes(state.gameId)) { bar.hidden = true; return; }
+  const list = batch.games.map(getGame).filter(Boolean);
+  const n = batch.games.indexOf(state.gameId) + 1;
+  const open = list.filter((g) => g.id !== state.gameId && !(g.complete && g.toCheck === 0));
+  const after = open.find((g) => batch.games.indexOf(g.id) > n - 1) || open[0];
+  bar.replaceChildren(
+    el("span", {}, el("b", {}, "Bulk import"), ` · game ${n} of ${list.length}`,
+      open.length ? ` · ${open.length} other${open.length > 1 ? "s" : ""} to check` : " · all others ready"),
+    el("span", { class: "bulk-bar-actions" },
+      after ? el("a", { class: "button-link primary small", href: `./?game=${encodeURIComponent(after.id)}&bulk=1` }, "Next game to check →") : null,
+      el("a", { class: "button-link small", href: "bulk.html" }, "← Back to bulk import")));
+  bar.hidden = false;
+}
+
+if (bulkParams.get("game")) {
+  openSaved(bulkParams.get("game")).then(renderBulkBar);
+}

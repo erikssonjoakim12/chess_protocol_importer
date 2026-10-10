@@ -39,7 +39,14 @@ photos go straight from your device to Google. There is no server.
    chapter is named like "Rond 3 vs. <opponent>" and the board is turned to
    your side. The login uses Lichess's OAuth with PKCE, entirely in the
    browser; the app only asks for permission to read and write studies.
-6. **Saved games.** Every game you read is kept in the browser on that device,
+6. **Bulk import** (bulk.html): up to 15 games (40 photos) at once, from the
+   computer or the phone's camera. Each photo is read on its own at a pace the
+   free tier allows (closing the browser is fine; it continues later), the
+   pages are grouped into games (you can join or split), you check each game,
+   then choose a study per game (suggested: one per event, matching your
+   existing studies) and add them all. Photos are kept on the device until the
+   game is in a study.
+7. **Saved games.** Every game you read is kept in the browser on that device,
    with your corrections, so it never has to be read again. Photos are not
    kept. "Download all" gives one .pgn file as a backup.
 

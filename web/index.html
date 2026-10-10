@@ -20,7 +20,10 @@
       <h1>Protokoll <span class="arrow">→</span> PGN</h1>
       <p class="tagline">Photo of a scoresheet in, Lichess-ready PGN out.</p>
     </div>
-    <button id="settings-btn" class="small" title="Gemini key">⚙ Settings</button>
+    <div class="top-actions">
+      <a class="button-link small" href="bulk.html" title="Many scoresheets at once, into your studies">Bulk import</a>
+      <button id="settings-btn" class="small" title="Gemini key">⚙ Settings</button>
+    </div>
   </header>
 
   <main>
@@ -138,6 +141,7 @@
 
     <!-- Step 2: review -->
     <section id="review" hidden>
+      <div id="bulk-bar" class="bulk-bar card" hidden></div>
       <div class="summary card" id="summary"></div>
 
       <div class="review-grid">

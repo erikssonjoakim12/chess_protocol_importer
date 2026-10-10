@@ -52,9 +52,17 @@
         <summary>Free? Safe?</summary>
         <p>The free tier is enough for reading your games; no credit card is needed. On the free tier Google may
           use what you send to improve its products.</p>
-        <p>Treat the key like a password: don't share it. For extra safety, in Google Cloud you can restrict
-          the key to the "Generative Language API" and to this website's address, so a copied key is useless
-          anywhere else.</p>
+        <p>Treat the key like a password: don't share it. For extra safety, lock the key to this app, so a
+          copied key is useless anywhere else:</p>
+        <ol>
+          <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google
+            Cloud → Credentials</a> (same Google account) and click your key.</li>
+          <li>Under <b>Application restrictions</b> choose <b>Websites</b> and add
+            <code>https://erikssonjoakim12.github.io/*</code></li>
+          <li>Under <b>API restrictions</b> choose <b>Restrict key</b> and tick <b>Generative Language API</b>.
+            Save.</li>
+        </ol>
+        <p>If you also run the app on your own computer, add <code>http://127.0.0.1:8000/*</code> as well.</p>
       </details>
     </section>
 

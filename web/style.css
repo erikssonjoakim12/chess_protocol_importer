@@ -243,3 +243,20 @@ details summary { cursor: pointer; color: var(--muted); }
 
 .editor-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .photo-tip { margin: 8px 0 0; }
+
+/* Lichess studies */
+.settings-sub { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.study-panel { margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.study-panel label { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+.study-panel input[type=text], .study-panel select { font: inherit; color: var(--text); background: var(--card);
+  padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.study-panel .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+@media (max-width: 700px) { .study-panel .row-fields { grid-template-columns: 1fr; } }
+.side-pick { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 4px 0 6px; }
+.side-pick label { flex-direction: row; align-items: center; gap: 5px; margin: 0; color: var(--text); font-size: 0.95rem; }
+
+.key-safety { margin: 10px 0 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
+.key-safety summary { font-weight: 600; color: var(--text); }
+.key-safety ol { padding-left: 22px; }
+.key-safety li { margin: 5px 0; }
+.key-safety code { word-break: break-all; }

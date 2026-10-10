@@ -48,22 +48,46 @@
         </div>
       </div>
       <p id="key-status" class="muted"></p>
-      <details class="small-text">
-        <summary>Free? Safe?</summary>
-        <p>The free tier is enough for reading your games; no credit card is needed. On the free tier Google may
-          use what you send to improve its products.</p>
-        <p>Treat the key like a password: don't share it. For extra safety, lock the key to this app, so a
-          copied key is useless anywhere else:</p>
+
+      <details id="key-safety" class="key-safety">
+        <summary>🔒 Keep your key safe</summary>
+        <p>Your key is like a password to your Google account's Gemini use. The free tier costs nothing, but if
+          billing is ever switched on (for example to use a paid model), a leaked key could cost money. Five
+          steps, the first is the important one:</p>
         <ol>
-          <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google
-            Cloud → Credentials</a> (same Google account) and click your key.</li>
-          <li>Under <b>Application restrictions</b> choose <b>Websites</b> and add
-            <code>https://erikssonjoakim12.github.io/*</code></li>
-          <li>Under <b>API restrictions</b> choose <b>Restrict key</b> and tick <b>Generative Language API</b>.
-            Save.</li>
+          <li><b>Lock the key to this app.</b> Then a copied key is useless anywhere else.
+            <ol type="a">
+              <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google
+                Cloud → Credentials</a> with the same Google account, and click your key.</li>
+              <li>Under <b>Application restrictions</b> choose <b>Websites</b> and add
+                <code class="app-address"></code>
+                <span class="local-address-note">(and, if you also run the app on your own computer,
+                <code>http://127.0.0.1:8000/*</code>)</span>.</li>
+              <li>Under <b>API restrictions</b> choose <b>Restrict key</b>, tick <b>Generative Language API</b>,
+                and <b>Save</b>.</li>
+            </ol></li>
+          <li><b>Never share it,</b> post it, or put it in a screenshot. This app only ever shows its first and last
+            four characters.</li>
+          <li><b>On a shared or borrowed device,</b> press <b>Remove</b> above when you're done.</li>
+          <li><b>If you switch on billing,</b> set a budget with e-mail alerts in Google Cloud
+            (<a href="https://console.cloud.google.com/billing/budgets" target="_blank" rel="noopener">Billing → Budgets &amp; alerts</a>),
+            so unexpected use can't go unnoticed.</li>
+          <li><b>If you think the key has leaked,</b> delete it in
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>,
+            create a new one and paste it here.</li>
         </ol>
-        <p>If you also run the app on your own computer, add <code>http://127.0.0.1:8000/*</code> as well.</p>
+        <p class="muted">The key is stored only in this browser on this device and sent only to Google. On the free
+          tier, Google may use what you send to improve its products.</p>
       </details>
+
+      <h2 class="settings-sub">Lichess</h2>
+      <p class="muted small-text">Log in to add games straight into your Lichess studies. "Open in Lichess" works without it.</p>
+      <p id="lichess-account"></p>
+      <div class="actions">
+        <button id="lichess-login" type="button">Log in with Lichess</button>
+        <button id="lichess-logout" type="button" class="small link" hidden>Log out</button>
+      </div>
+      <p id="lichess-login-status" class="muted"></p>
     </section>
 
     <!-- Games read earlier, kept on this device -->
@@ -154,6 +178,7 @@
           <button id="copy-btn" class="primary">Copy</button>
           <button id="download-btn">Download .pgn</button>
           <button id="lichess-btn" title="Creates a public game page on Lichess that you can share">Open in Lichess</button>
+          <button id="study-btn" title="Add the game as a chapter in one of your Lichess studies">Add to study</button>
           <button id="restart-btn" class="link">Start over</button>
           <span id="copy-status" class="muted"></span>
         </div>
@@ -162,6 +187,39 @@
           Leave out names (players, ratings, clubs, event, round, board) when copying, downloading or opening in Lichess
         </label>
         <div id="lichess-result" class="lichess-result" hidden></div>
+        <div id="study-panel" class="study-panel" hidden>
+          <div id="study-login" hidden>
+            <p>To add games to your studies, log in with Lichess once.</p>
+            <button id="study-login-btn" class="primary" type="button">Log in with Lichess</button>
+            <p class="muted small-text">You'll go to lichess.org and back. This game is saved and reopens; photos are not kept.</p>
+          </div>
+          <div id="study-form" hidden>
+            <label>Study
+              <select id="study-select"></select>
+            </label>
+            <div id="new-study" class="row-fields" hidden>
+              <label>New study name <input id="new-study-name" type="text" maxlength="100"></label>
+              <label>Who can see it
+                <select id="new-study-visibility">
+                  <option value="private">Private (only you)</option>
+                  <option value="unlisted">Unlisted (anyone with the link)</option>
+                  <option value="public">Public</option>
+                </select>
+              </label>
+            </div>
+            <label>Chapter name <input id="chapter-name" type="text" maxlength="100"></label>
+            <div class="side-pick">You played:
+              <label><input type="radio" name="my-side" value="white"> <span id="side-white">White</span></label>
+              <label><input type="radio" name="my-side" value="black"> <span id="side-black">Black</span></label>
+              <span class="muted small-text">(the board is turned to your side)</span>
+            </div>
+            <div class="actions">
+              <button id="study-add" class="primary" type="button">Add chapter</button>
+              <button id="study-cancel" class="link" type="button">Cancel</button>
+              <span id="study-status" class="muted"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>

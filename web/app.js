@@ -4,6 +4,7 @@ import { GeminiReader } from "./core/gemini.js";
 import { buildPgn } from "./core/pgn.js";
 import { processGame, startReview } from "./core/pipeline.js";
 import { getKey } from "./settings.js";
+import { account, addToStudy, createStudy, finishLogin, login, logout, myStudies } from "./lichess.js";
 
 // ---------- State ----------
 const state = {
@@ -183,6 +184,7 @@ function beginReview(data) {
   state.headerFlags = new Set(data.header_flags || []);
   state.gameId = newGameId();
   state.lichess = null;
+  state.study = null;
   applyResponse(data);
   state.selected = firstIssue() ?? 0;
   showReview();
@@ -901,6 +903,7 @@ function saveCurrentGame() {
     pgn: state.pgn,
     toCheck: state.res.counts.check + state.res.counts.fail,
     lichess: state.lichess,
+    study: state.study || null,
     // Enough to reopen the review exactly where it was left.
     review: {
       headers: state.headers, plies: state.plies, endMarker: state.endMarker,
@@ -921,6 +924,7 @@ function renderSaved() {
     el("button", { class: "small", onclick: () => openSaved(g.id) }, "Open"),
     el("button", { class: "small", onclick: () => copyText(g.pgn, "PGN copied.") }, "Copy PGN"),
     g.lichess ? el("a", { href: g.lichess.url, target: "_blank", rel: "noopener" }, "Lichess") : null,
+    g.study ? el("a", { href: g.study.url, target: "_blank", rel: "noopener" }, "Study") : null,
     el("button", { class: "small link", onclick: () => deleteSaved(g.id) }, "Delete"),
   )));
 }
@@ -930,7 +934,7 @@ function openSaved(id) {
   if (!g) return;
   state.photos.forEach((p) => URL.revokeObjectURL(p.url));
   Object.assign(state, {
-    photos: [], gameId: g.id, lichess: g.lichess || null,
+    photos: [], gameId: g.id, lichess: g.lichess || null, study: g.study || null,
     headers: { ...g.review.headers }, plies: g.review.plies.map((p) => ({ ...p })),
     endMarker: g.review.endMarker, notes: g.review.notes,
     headerFlags: new Set(g.review.headerFlags || []), selected: 0,
@@ -964,3 +968,148 @@ renderSaved();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js").catch((e) => console.warn("Offline support unavailable:", e));
 }
+
+// ---------- Lichess login and studies ----------
+const LAST_STUDY = "protokoll-last-study";
+const MY_NAME = "protokoll-my-name";
+const NEW_STUDY = "__new__";
+const remember = (key, value) => { try { localStorage.setItem(key, value); } catch { /* not saved */ } };
+const recall = (key) => { try { return localStorage.getItem(key) || ""; } catch { return ""; } };
+
+function renderLichessAccount() {
+  const a = account();
+  $("#lichess-account").textContent = a ? "✓ Logged in as " + a.username : "Not logged in.";
+  $("#lichess-login").hidden = Boolean(a);
+  $("#lichess-logout").hidden = !a;
+}
+
+async function goLogin() {
+  // The page goes to lichess.org and back: save the game first so it reopens.
+  clearTimeout(saveTimer);
+  saveCurrentGame();
+  await login(state.res ? state.gameId : null);
+}
+
+$("#lichess-login").addEventListener("click", goLogin);
+$("#study-login-btn").addEventListener("click", goLogin);
+$("#lichess-logout").addEventListener("click", async () => {
+  if (!confirm("Log out of Lichess in this app?")) return;
+  await logout();
+  renderLichessAccount();
+  $("#study-panel").hidden = true;
+});
+
+/** Which side the user played: the side whose name they had before, if any. */
+function guessMySide(h) {
+  const me = recall(MY_NAME).toLowerCase();
+  if (me && (h.white || "").toLowerCase() === me) return "white";
+  if (me && (h.black || "").toLowerCase() === me) return "black";
+  return null;
+}
+
+function chapterName(h, side) {
+  const opponent = side === "white" ? h.black : side === "black" ? h.white : "";
+  if (h.round && opponent) return "Rond " + h.round + " vs. " + opponent;
+  if (opponent) return "vs. " + opponent;
+  return [h.white || "?", h.black || "?"].join(" – ");
+}
+
+let chapterNameEdited = false;
+
+$("#study-btn").addEventListener("click", openStudyPanel);
+$("#study-cancel").addEventListener("click", () => { $("#study-panel").hidden = true; });
+
+async function openStudyPanel() {
+  const panel = $("#study-panel");
+  panel.hidden = false;
+  const a = account();
+  $("#study-login").hidden = Boolean(a);
+  $("#study-form").hidden = !a;
+  if (!a) return;
+  const h = state.headers;
+  // Side and chapter name
+  const side = guessMySide(h);
+  document.querySelectorAll('input[name="my-side"]').forEach((r) => { r.checked = r.value === side; });
+  $("#side-white").textContent = "White" + (h.white ? " (" + h.white + ")" : "");
+  $("#side-black").textContent = "Black" + (h.black ? " (" + h.black + ")" : "");
+  chapterNameEdited = false;
+  $("#chapter-name").value = chapterName(h, side);
+  const year = (h.date || "").slice(0, 4);
+  $("#new-study-name").value = [/^\d{4}$/.test(year) ? year : "", h.event].filter(Boolean).join(" ") || "My games";
+  $("#study-status").textContent = "";
+  updateAddButton();
+  // The user's studies
+  const select = $("#study-select");
+  select.replaceChildren(el("option", { value: "" }, "Loading your studies…"));
+  try {
+    const studies = await myStudies();
+    const last = recall(LAST_STUDY);
+    select.replaceChildren(
+      el("option", { value: NEW_STUDY }, "＋ New study…"),
+      ...studies.map((st) => el("option", { value: st.id, selected: st.id === last }, st.name)));
+    if (!studies.some((st) => st.id === last)) select.value = studies.length ? studies[0].id : NEW_STUDY;
+  } catch (e) {
+    select.replaceChildren(el("option", { value: NEW_STUDY }, "＋ New study…"));
+    $("#study-status").textContent = e.message;
+  }
+  $("#new-study").hidden = select.value !== NEW_STUDY;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+$("#study-select").addEventListener("change", (e) => { $("#new-study").hidden = e.target.value !== NEW_STUDY; });
+$("#chapter-name").addEventListener("input", () => { chapterNameEdited = true; });
+document.querySelectorAll('input[name="my-side"]').forEach((r) => r.addEventListener("change", () => {
+  if (!chapterNameEdited) $("#chapter-name").value = chapterName(state.headers, r.value);
+  updateAddButton();
+}));
+
+function chosenSide() {
+  const r = document.querySelector('input[name="my-side"]:checked');
+  return r ? r.value : null;
+}
+
+function updateAddButton() {
+  $("#study-add").disabled = !chosenSide();
+  $("#study-add").title = chosenSide() ? "" : "Choose which side you played";
+}
+
+$("#study-add").addEventListener("click", async () => {
+  const side = chosenSide();
+  const status = $("#study-status");
+  const btn = $("#study-add");
+  btn.disabled = true;
+  status.replaceChildren(el("span", { class: "spinner" }), " Adding to Lichess…");
+  try {
+    let studyId = $("#study-select").value;
+    const fresh = studyId === NEW_STUDY;
+    if (fresh) {
+      const name = $("#new-study-name").value.trim();
+      if (name.length < 2) throw new Error("Give the new study a name.");
+      studyId = await createStudy(name, $("#new-study-visibility").value);
+    }
+    const url = await addToStudy(studyId, exportPgn(), $("#chapter-name").value.trim() || chapterName(state.headers, side), side, fresh);
+    remember(LAST_STUDY, studyId);
+    if (state.headers[side]) remember(MY_NAME, state.headers[side]);
+    state.study = { url };
+    saveSoon();
+    status.replaceChildren("✓ Added: ", el("a", { href: url, target: "_blank", rel: "noopener" }, url));
+  } catch (e) {
+    status.replaceChildren(el("span", { class: "error" }, e.message));
+  } finally {
+    updateAddButton();
+  }
+});
+
+renderLichessAccount();
+// Back from lichess.org after logging in?
+finishLogin().then((result) => {
+  if (!result) return;
+  renderLichessAccount();
+  $("#lichess-login-status").textContent = result.message;
+  if (result.gameId && loadGames().some((g) => g.id === result.gameId)) {
+    openSaved(result.gameId);
+    if (result.ok) setTimeout(openStudyPanel, 300);
+  } else {
+    $("#settings").hidden = false;
+  }
+});

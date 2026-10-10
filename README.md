@@ -34,7 +34,12 @@ photos go straight from your device to Google. There is no server.
    PGN → paste). Or click **Open in Lichess**: it creates a Lichess game page
    (board, moves, analysis, clocks) with a link you can share. No login is
    needed, but the game is public to anyone with the link.
-5. **Saved games.** Every game you read is kept in the browser on that device,
+5. **Add to study.** Log in with Lichess (Settings) and add the game as a
+   chapter to one of your studies, or a new one (private by default). The
+   chapter is named like "Rond 3 vs. <opponent>" and the board is turned to
+   your side. The login uses Lichess's OAuth with PKCE, entirely in the
+   browser; the app only asks for permission to read and write studies.
+6. **Saved games.** Every game you read is kept in the browser on that device,
    with your corrections, so it never has to be read again. Photos are not
    kept. "Download all" gives one .pgn file as a backup.
 
@@ -50,7 +55,17 @@ The first time, the app asks for a key:
 3. Paste it into the app. It is checked with Google and kept in this browser.
 
 No credit card is needed for the free tier. On the free tier Google may use
-what you send to improve its products. Treat the key like a password.
+what you send to improve its products.
+
+Keep the key safe (the app's settings walk you through this):
+
+- **Lock it to the app:** in Google Cloud → Credentials, restrict the key to
+  the app's web address (Websites) and to the Generative Language API. A
+  copied key is then useless anywhere else.
+- Never share it or put it in a screenshot; on a shared device, remove it
+  from the app when done.
+- If you switch on billing (e.g. for a paid model), set a budget with alerts.
+- If it may have leaked, delete it in AI Studio and create a new one.
 
 ## Running it on your computer
 

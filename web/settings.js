@@ -51,7 +51,8 @@ $("#key-save").addEventListener("click", async () => {
     return;
   }
   input.value = "";
-  status.textContent = "Saved. You're ready to read scoresheets.";
+  status.textContent = "Saved. You're ready to read scoresheets. Now take a minute to lock the key to this app (below).";
+  $("#key-safety").open = true;
   render();
 });
 
@@ -70,5 +71,11 @@ $("#key-remove").addEventListener("click", () => {
   status.textContent = "Removed.";
   render();
 });
+
+// The address to lock the key to: wherever this copy of the app runs.
+const address = location.origin + location.pathname.replace(/[^/]*$/, "") + "*";
+document.querySelectorAll(".app-address").forEach((c) => { c.textContent = address; });
+const local = /^http:\/\/(127\.0\.0\.1|localhost)/.test(location.origin);
+document.querySelectorAll(".local-address-note").forEach((n) => { n.hidden = local; });
 
 render();

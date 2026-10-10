@@ -94,3 +94,9 @@ JavaScript version must give exactly the same moves, flags, hints and PGN.
 
 Real scoresheets used for testing (`example_protocols/`, `tests/private/`) are
 private and never committed.
+
+## Licence
+
+MIT, see [LICENSE](LICENSE). Third-party parts keep their own licences:
+chess.js (BSD-2-Clause, `web/vendor/`) and the cburnett chess pieces (BSD,
+`web/pieces/`).

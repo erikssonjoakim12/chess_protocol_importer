@@ -2,6 +2,7 @@
   "name": "chess-protocol-importer",
   "version": "0.2.0",
   "private": true,
+  "license": "MIT",
   "description": "Photo of a handwritten chess scoresheet in, Lichess-ready PGN out. Runs in the browser.",
   "type": "module",
   "scripts": {

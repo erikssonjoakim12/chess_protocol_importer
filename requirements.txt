@@ -1,0 +1,9 @@
+fastapi==0.128.8
+uvicorn==0.39.0
+python-multipart==0.0.20
+chess==1.11.2
+python-dotenv==1.2.1
+
+# tests
+pytest==8.4.2
+httpx==0.28.1

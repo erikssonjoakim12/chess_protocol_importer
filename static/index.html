@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Protokoll → PGN</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Protokoll <span class="arrow">→</span> PGN</h1>
+    <p class="tagline">Photo of a scoresheet in, Lichess-ready PGN out.</p>
+  </header>
+
+  <main>
+    <!-- Step 1: photos -->
+    <section id="upload" class="card">
+      <h2>1. Photos of the scoresheet</h2>
+      <p class="muted">One game at a time. If the game is on two pages, add both, page 1 first.</p>
+      <label id="dropzone" class="dropzone">
+        <input id="file-input" type="file" accept="image/*" multiple hidden>
+        <span class="dz-main">Drop photos here or <u>choose files</u></span>
+        <span class="muted">On a phone you can take the photo directly.</span>
+      </label>
+      <ol id="thumbs" class="thumbs"></ol>
+      <div class="actions">
+        <button id="read-btn" class="primary" disabled>Read scoresheet</button>
+        <button id="read-careful-btn" disabled title="Slower (1-2 minutes) but reads more carefully. Use it if the fast reading has many mistakes.">Read carefully (slower)</button>
+        <span id="read-status" class="muted"></span>
+      </div>
+      <p id="read-error" class="error" hidden></p>
+    </section>
+
+    <!-- Step 2: review -->
+    <section id="review" hidden>
+      <div class="summary card" id="summary"></div>
+
+      <div class="review-grid">
+        <div class="card board-card">
+          <div id="board" class="board" aria-label="Chess board"></div>
+          <div class="board-nav">
+            <button data-nav="start" title="Start">⏮</button>
+            <button data-nav="prev" title="Previous (←)">◀</button>
+            <button data-nav="next" title="Next (→)">▶</button>
+            <button data-nav="end" title="End">⏭</button>
+            <button id="flip-btn" title="Flip board">⇅</button>
+            <button id="next-issue-btn" class="small">Next to check</button>
+          </div>
+          <div id="editor" class="editor"></div>
+        </div>
+
+        <div class="card moves-card">
+          <h2>Moves</h2>
+          <p class="muted legend">
+            <span class="dot ok"></span>ok
+            <span class="dot corrected"></span>auto-corrected
+            <span class="dot check"></span>please check
+            <span class="dot fail"></span>problem
+          </p>
+          <div id="moves-scroll" class="moves-scroll">
+            <table id="moves" class="moves"></table>
+          </div>
+        </div>
+
+        <div class="card photos-card">
+          <h2>Photos</h2>
+          <div id="photos" class="photos"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Game details</h2>
+        <form id="tags" class="tags" autocomplete="off"></form>
+        <p id="result-warning" class="warning" hidden></p>
+        <p id="notes" class="muted" hidden></p>
+      </div>
+
+      <div class="card">
+        <h2>PGN</h2>
+        <p id="pgn-warning" class="warning" hidden></p>
+        <textarea id="pgn" readonly spellcheck="false"></textarea>
+        <div class="actions">
+          <button id="copy-btn" class="primary">Copy</button>
+          <button id="download-btn">Download .pgn</button>
+          <button id="restart-btn" class="link">Start over</button>
+          <span id="copy-status" class="muted"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox" hidden>
+    <img alt="Scoresheet photo" draggable="false">
+    <div class="lb-tools">
+      <button data-zoom="out" title="Zoom out">−</button>
+      <button data-zoom="fit" title="Show the whole page">Fit</button>
+      <button data-zoom="in" title="Zoom in">+</button>
+      <button data-zoom="close" title="Close (Esc)">✕</button>
+    </div>
+    <div class="lb-help">Scroll or pinch to zoom · drag to move · Esc to close</div>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

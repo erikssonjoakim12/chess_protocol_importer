@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+*.pyc
+
+# Real scoresheets and games: private test data, never committed.
+example_protocols/
+tests/private/

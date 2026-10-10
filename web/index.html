@@ -50,34 +50,45 @@
       <p id="key-status" class="muted"></p>
 
       <details id="key-safety" class="key-safety">
-        <summary>🔒 Keep your key safe</summary>
-        <p>Your key is like a password to your Google account's Gemini use. The free tier costs nothing, but if
-          billing is ever switched on (for example to use a paid model), a leaked key could cost money. Five
-          steps, the first is the important one:</p>
-        <ol>
-          <li><b>Lock the key to this app.</b> Then a copied key is useless anywhere else.
-            <ol type="a">
-              <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google
-                Cloud → Credentials</a> with the same Google account, and click your key.</li>
-              <li>Under <b>Application restrictions</b> choose <b>Websites</b> and add
-                <code class="app-address"></code>
-                <span class="local-address-note">(and, if you also run the app on your own computer,
-                <code>http://127.0.0.1:8000/*</code>)</span>.</li>
-              <li>Under <b>API restrictions</b> choose <b>Restrict key</b>, tick <b>Generative Language API</b>,
-                and <b>Save</b>.</li>
-            </ol></li>
-          <li><b>Never share it,</b> post it, or put it in a screenshot. This app only ever shows its first and last
-            four characters.</li>
-          <li><b>On a shared or borrowed device,</b> press <b>Remove</b> above when you're done.</li>
-          <li><b>If you switch on billing,</b> set a budget with e-mail alerts in Google Cloud
-            (<a href="https://console.cloud.google.com/billing/budgets" target="_blank" rel="noopener">Billing → Budgets &amp; alerts</a>),
-            so unexpected use can't go unnoticed.</li>
-          <li><b>If you think the key has leaked,</b> delete it in
-            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>,
-            create a new one and paste it here.</li>
-        </ol>
-        <p class="muted">The key is stored only in this browser on this device and sent only to Google. On the free
-          tier, Google may use what you send to improve its products.</p>
+        <summary>🔒 Is my key safe?</summary>
+        <p><b>On the free tier there's little to worry about.</b> Google doesn't charge a free key, so the worst
+          case if someone got hold of it is that they use up your free quota for the day. The key is stored only
+          in this browser on this device, and only ever sent to Google.</p>
+        <p>Two simple habits:</p>
+        <ul>
+          <li>Don't share the key or show it in a screenshot (this app only shows its first and last four characters).</li>
+          <li>On a shared or borrowed device, press <b>Remove</b> above when you're done.</li>
+        </ul>
+        <p>On the free tier, Google may use what you send to improve its products.</p>
+
+        <details class="lock-key">
+          <summary>Optional: lock the key to this app</summary>
+          <p>Then a copied key doesn't work anywhere else. Takes a minute:</p>
+          <ol>
+            <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google
+              Cloud → Credentials</a> with the same Google account, and click your key.</li>
+            <li>Under <b>Application restrictions</b> choose <b>Websites</b> and add
+              <code class="app-address"></code>
+              <span class="local-address-note">(and, if you also run the app on your own computer,
+              <code>http://127.0.0.1:8000/*</code>)</span>.</li>
+            <li>Under <b>API restrictions</b> choose <b>Restrict key</b>, tick <b>Generative Language API</b>,
+              and <b>Save</b>.</li>
+          </ol>
+        </details>
+
+        <details class="paid-key">
+          <summary>I've switched on billing / I use a paid model</summary>
+          <p>Then a leaked key could cost money, so a bit more care is worth it:</p>
+          <ol>
+            <li><b>Lock the key to this app</b> (see above). With billing on, this is the important one.</li>
+            <li><b>Set a budget with e-mail alerts</b> in Google Cloud
+              (<a href="https://console.cloud.google.com/billing/budgets" target="_blank" rel="noopener">Billing → Budgets &amp; alerts</a>),
+              so unexpected use can't go unnoticed.</li>
+            <li><b>If you think the key has leaked,</b> delete it in
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>,
+              create a new one and paste it here.</li>
+          </ol>
+        </details>
       </details>
 
       <h2 class="settings-sub">Lichess</h2>

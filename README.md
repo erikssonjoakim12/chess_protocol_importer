@@ -57,15 +57,13 @@ The first time, the app asks for a key:
 No credit card is needed for the free tier. On the free tier Google may use
 what you send to improve its products.
 
-Keep the key safe (the app's settings walk you through this):
-
-- **Lock it to the app:** in Google Cloud → Credentials, restrict the key to
-  the app's web address (Websites) and to the Generative Language API. A
-  copied key is then useless anywhere else.
-- Never share it or put it in a screenshot; on a shared device, remove it
-  from the app when done.
-- If you switch on billing (e.g. for a paid model), set a budget with alerts.
-- If it may have leaked, delete it in AI Studio and create a new one.
+On the free tier there is little to worry about: Google does not charge a free
+key, so the worst case if it leaked is someone using up your free quota. Don't
+share it, and remove it from the app on shared devices. Optionally, lock it to
+the app's web address and the Generative Language API in Google Cloud →
+Credentials. If you switch on billing (e.g. for a paid model), do lock it, set
+a budget with alerts, and replace the key if it may have leaked. The app's
+settings explain each step.
 
 ## Running it on your computer
 

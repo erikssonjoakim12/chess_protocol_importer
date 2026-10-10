@@ -51,8 +51,7 @@ $("#key-save").addEventListener("click", async () => {
     return;
   }
   input.value = "";
-  status.textContent = "Saved. You're ready to read scoresheets. Now take a minute to lock the key to this app (below).";
-  $("#key-safety").open = true;
+  status.textContent = "Saved. You're ready to read scoresheets.";
   render();
 });
 

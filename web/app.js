@@ -1048,7 +1048,8 @@ async function openStudyPanel() {
   if (!a) return;
   const h = state.headers;
   // Side and chapter name
-  const side = guessMySide(h);
+  // Known from earlier games, otherwise White (easy to switch; remembered after).
+  const side = guessMySide(h) || "white";
   document.querySelectorAll('input[name="my-side"]').forEach((r) => { r.checked = r.value === side; });
   $("#side-white").textContent = "White" + (h.white ? " (" + h.white + ")" : "");
   $("#side-black").textContent = "Black" + (h.black ? " (" + h.black + ")" : "");
@@ -1088,15 +1089,28 @@ function chosenSide() {
   return r ? r.value : null;
 }
 
+// The button stays clickable; a missing side is explained when it's pressed
+// (a greyed-out button doesn't say why, and has no tooltip on phones).
 function updateAddButton() {
-  $("#study-add").disabled = !chosenSide();
-  $("#study-add").title = chosenSide() ? "" : "Choose which side you played";
+  $("#study-add").disabled = false;
+  if (chosenSide()) {
+    $(".side-pick").classList.remove("attention");
+    if ($("#study-status").dataset.sideHint) $("#study-status").textContent = "";
+    delete $("#study-status").dataset.sideHint;
+  }
 }
 
 $("#study-add").addEventListener("click", async () => {
   const side = chosenSide();
   const status = $("#study-status");
   const btn = $("#study-add");
+  if (!side) {
+    $(".side-pick").classList.add("attention");
+    status.dataset.sideHint = "1";
+    status.replaceChildren(el("span", { class: "error" },
+      "First choose which side you played (above): the board is turned to your side."));
+    return;
+  }
   btn.disabled = true;
   status.replaceChildren(el("span", { class: "spinner" }), " Adding to Lichess…");
   try {

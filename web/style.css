@@ -264,3 +264,4 @@ details summary { cursor: pointer; color: var(--muted); }
 .key-safety ul { padding-left: 22px; }
 .key-safety details { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .key-safety details summary { font-weight: 600; color: var(--muted); }
+.side-pick.attention { outline: 2px solid var(--check); outline-offset: 4px; border-radius: 6px; }

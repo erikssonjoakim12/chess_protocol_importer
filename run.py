@@ -55,7 +55,13 @@ def main():
     args = parser.parse_args()
 
     host = "0.0.0.0" if args.lan else "127.0.0.1"
-    server = http.server.ThreadingHTTPServer((host, args.port), functools.partial(Handler, directory=WEB))
+    try:
+        server = http.server.ThreadingHTTPServer((host, args.port), functools.partial(Handler, directory=WEB))
+    except OSError:
+        print("\n  Port %d is already in use, probably by the app itself in another window"
+              "\n  (or an old copy still running). Just open http://127.0.0.1:%d, or close"
+              "\n  the other window and start again.\n" % (args.port, args.port))
+        return
     url = "http://127.0.0.1:%d" % args.port
     print("\n  Open %s" % url)
     if args.lan:

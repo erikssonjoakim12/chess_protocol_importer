@@ -6,6 +6,9 @@ import { sanToLocal } from "./core/notation.js";
 import { buildPgn } from "./core/pgn.js";
 import { processGame, startReview } from "./core/pipeline.js";
 import { getKey } from "./settings.js";
+import { deleteGame, gameRecord, gameTitle as titleOf, getGame, loadGames, newGameId, putGame } from "./games.js";
+import { deletePhotos, getPhotos } from "./photos.js";
+import { chapterName } from "./core/studies.js";
 import { account, addToStudy, createStudy, finishLogin, login, logout, myStudies } from "./lichess.js";
 
 // ---------- State ----------
@@ -867,39 +870,8 @@ async function copyText(text, message) {
   $("#copy-status").textContent = message;
 }
 
-// ---------- Saved games (this device only) ----------
-// Every game read is kept in the browser, with the corrections made to it, so
-// it never has to be read again. Photos are not kept.
-const STORE_KEY = "protokoll-games-v1";
-const MAX_SAVED = 500;
-
-function newGameId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-function loadGames() {
-  try {
-    const list = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
-}
-
-function storeGames(list) {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(list.slice(0, MAX_SAVED)));
-    return true;
-  } catch {
-    return false;  // private browsing, storage full or blocked
-  }
-}
-
-function gameTitle(h = state.headers) {
-  const players = (h.white || "?") + " – " + (h.black || "?");
-  const date = h.date && !h.date.startsWith("?") ? h.date.replace(/\./g, "-") : "";
-  return [date, players].filter(Boolean).join(" · ");
-}
+// ---------- Saved games (this device only, see games.js) ----------
+const gameTitle = (h = state.headers) => titleOf(h);
 
 let saveTimer = null;
 function saveSoon() {
@@ -909,26 +881,13 @@ function saveSoon() {
 
 function saveCurrentGame() {
   if (!state.gameId || !state.res) return;
-  const list = loadGames();
-  const old = list.find((g) => g.id === state.gameId);
-  const record = {
-    id: state.gameId,
-    created: old ? old.created : new Date().toISOString(),
-    updated: new Date().toISOString(),
-    title: gameTitle(),
-    result: state.headers.result || state.derivedResult || "*",
-    pgn: state.pgn,
-    toCheck: state.res.counts.check + state.res.counts.fail,
-    lichess: state.lichess,
-    study: state.study || null,
-    // Enough to reopen the review exactly where it was left.
-    review: {
-      headers: state.headers, plies: state.plies, endMarker: state.endMarker,
-      notes: state.notes || "", headerFlags: [...(state.headerFlags || [])],
-      notation: state.notation, detectedNotation: state.detectedNotation, notationAuto: state.notationAuto,
-    },
-  };
-  storeGames([record, ...list.filter((g) => g.id !== state.gameId)]);
+  putGame(gameRecord({
+    id: state.gameId, headers: state.headers, plies: state.plies, endMarker: state.endMarker,
+    notes: state.notes, headerFlags: state.headerFlags, notation: state.notation,
+    detectedNotation: state.detectedNotation, notationAuto: state.notationAuto,
+    res: state.res, pgn: state.pgn, derivedResult: state.derivedResult,
+    lichess: state.lichess, study: state.study || null,
+  }, getGame(state.gameId)));
   renderSaved();
 }
 
@@ -947,12 +906,15 @@ function renderSaved() {
   )));
 }
 
-function openSaved(id) {
-  const g = loadGames().find((x) => x.id === id);
+async function openSaved(id) {
+  const g = getGame(id);
   if (!g) return;
   state.photos.forEach((p) => URL.revokeObjectURL(p.url));
+  // Photos are kept while a game is in progress (bulk import); none otherwise.
+  const stored = await getPhotos(g.photoIds).catch(() => []);
   Object.assign(state, {
-    photos: [], gameId: g.id, lichess: g.lichess || null, study: g.study || null,
+    photos: stored.map((ph) => ({ blob: ph.blob, url: URL.createObjectURL(ph.blob), name: ph.name, id: ph.id })),
+    gameId: g.id, lichess: g.lichess || null, study: g.study || null,
     headers: { ...g.review.headers }, plies: g.review.plies.map((p) => ({ ...p })),
     endMarker: g.review.endMarker, notes: g.review.notes,
     headerFlags: new Set(g.review.headerFlags || []), selected: 0,
@@ -968,9 +930,10 @@ function openSaved(id) {
 }
 
 function deleteSaved(id) {
-  const g = loadGames().find((x) => x.id === id);
+  const g = getGame(id);
   if (!g || !confirm("Delete the saved game " + (g.title || "") + "?")) return;
-  storeGames(loadGames().filter((x) => x.id !== id));
+  deleteGame(id);
+  deletePhotos(g.photoIds).catch(() => {});
   if (state.gameId === id) state.gameId = null;
   renderSaved();
 }
@@ -1027,12 +990,6 @@ function guessMySide(h) {
   return null;
 }
 
-function chapterName(h, side) {
-  const opponent = side === "white" ? h.black : side === "black" ? h.white : "";
-  if (h.round && opponent) return "Rond " + h.round + " vs. " + opponent;
-  if (opponent) return "vs. " + opponent;
-  return [h.white || "?", h.black || "?"].join(" – ");
-}
 
 let chapterNameEdited = false;
 

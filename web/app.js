@@ -1,6 +1,7 @@
 // The page: photos in, review, PGN out. Everything runs in the browser; the
 // only outside services are Gemini (with the user's own key) and Lichess.
 import { GeminiReader } from "./core/gemini.js";
+import { buildPgn } from "./core/pgn.js";
 import { processGame, startReview } from "./core/pipeline.js";
 import { getKey } from "./settings.js";
 
@@ -180,6 +181,28 @@ $("#demo-btn").addEventListener("click", async () => {
 });
 
 // ---------- Working out the moves ----------
+// ---------- "Leave out names" when exporting ----------
+// Off by default. The saved game always keeps everything; only what is
+// copied, downloaded or sent to Lichess is affected.
+const LEAVE_OUT_KEY = "protokoll-leave-out-names";
+const IDENTIFYING = ["white", "black", "white_elo", "black_elo", "white_team", "black_team",
+                     "event", "site", "round", "board", "group"];
+const leaveOutNames = () => { try { return localStorage.getItem(LEAVE_OUT_KEY) === "1"; } catch { return false; } };
+
+/** The PGN as it leaves the app: with or without names. */
+function exportPgn() {
+  if (!leaveOutNames() || !state.res) return state.pgn;
+  const headers = { ...state.headers };
+  for (const key of IDENTIFYING) headers[key] = "";
+  return buildPgn(headers, state.res.plies, state.headers.result || state.derivedResult || "*");
+}
+
+$("#leave-out-names").checked = leaveOutNames();
+$("#leave-out-names").addEventListener("change", (e) => {
+  try { localStorage.setItem(LEAVE_OUT_KEY, e.target.checked ? "1" : "0"); } catch { /* not saved */ }
+  if (state.res) { renderPgn(); renderLichessResult(); }
+});
+
 function applyResponse(data) {
   state.res = data.resolution;
   state.pgn = data.pgn;
@@ -462,7 +485,7 @@ function renderResult() {
 }
 
 function renderPgn() {
-  $("#pgn").value = state.pgn;
+  $("#pgn").value = exportPgn();
   const warn = $("#pgn-warning");
   const c = state.res.counts;
   if (c.fail) {
@@ -696,8 +719,8 @@ $("#copy-btn").addEventListener("click", async () => {
 
 $("#download-btn").addEventListener("click", () => {
   const h = state.headers;
-  const name = [h.white, h.black, h.date].filter(Boolean).join("_").replace(/[^\p{L}\p{N}._-]+/gu, "-") || "game";
-  downloadText(name + ".pgn", state.pgn);
+  const name = (leaveOutNames() ? ["game", h.date] : [h.white, h.black, h.date]).filter(Boolean).join("_").replace(/[^\p{L}\p{N}._-]+/gu, "-") || "game";
+  downloadText(name + ".pgn", exportPgn());
 });
 
 function downloadText(name, text) {
@@ -727,7 +750,7 @@ $("#restart-btn").addEventListener("click", () => {
 $("#lichess-btn").addEventListener("click", openInLichess);
 
 async function openInLichess() {
-  const pgn = state.pgn;
+  const pgn = exportPgn();
   if (!navigator.onLine) {
     const box = $("#lichess-result");
     box.replaceChildren(el("span", { class: "error" }, "You're offline. Opening in Lichess needs internet."));
@@ -773,7 +796,7 @@ function renderLichessResult() {
   const box = $("#lichess-result");
   const l = state.lichess;
   if (!l) { box.hidden = true; return; }
-  const stale = l.pgn !== state.pgn;
+  const stale = l.pgn !== exportPgn();
   const parts = [
     el("span", {}, stale ? "On Lichess (made before your latest changes; open again to update): " : "On Lichess: "),
     el("a", { href: l.url, target: "_blank", rel: "noopener" }, l.url),

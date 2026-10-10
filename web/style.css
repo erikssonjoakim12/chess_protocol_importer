@@ -237,3 +237,6 @@ details summary { cursor: pointer; color: var(--muted); }
 .camera-btn { display: none; margin-top: 10px; padding: 12px; text-align: center; border-radius: 10px;
               background: var(--accent); color: var(--accent-text); font-weight: 600; cursor: pointer; }
 @media (pointer: coarse) { .camera-btn { display: block; } }
+
+.option { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
+.option input { margin-top: 3px; }

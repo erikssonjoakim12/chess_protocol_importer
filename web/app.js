@@ -182,7 +182,9 @@ async function reprocess(then) {
   // Let the page show the click first; replaying a long messy game can take a moment.
   await new Promise((ok) => setTimeout(ok, 0));
   if (seq !== state.requestSeq) return;  // a newer edit is on its way
+  const before = openIssues();
   applyResponse(processGame(state.headers, state.plies, state.endMarker));
+  if (before > 0 && openIssues() === 0 && state.res.complete) state.justFinished = true;
   if (then) then();
   renderAll();
   saveSoon();
@@ -220,9 +222,28 @@ function firstIssue(from = -1) {
   return null;
 }
 
+const openIssues = () => (state.res ? state.res.counts.check + state.res.counts.fail : 0);
+const isReady = () => state.res && state.res.complete && openIssues() === 0;
+
 function renderSummary() {
   const c = state.res.counts;
   const box = $("#summary");
+  const ready = isReady();
+  box.classList.toggle("ready", ready);
+  const next = $("#next-issue-btn");
+  next.disabled = openIssues() === 0;
+  next.textContent = openIssues() ? "Next to check (" + openIssues() + ")" : "Nothing to check";
+  if (ready) {
+    // Nothing left to do: say so clearly, with the next step right here.
+    box.replaceChildren(
+      el("span", { class: "ready-text" }, "✓ Ready: all " + state.plies.length + " half-moves are checked."),
+      el("span", { class: "muted" }, "Nothing more to confirm."),
+      el("span", { class: "ready-actions" },
+        el("button", { class: "primary small", onclick: () => $("#copy-btn").click() }, "Copy PGN"),
+        el("button", { class: "small", onclick: () => $("#lichess-btn").click() }, "Open in Lichess"),
+        el("button", { class: "small", onclick: () => $("#download-btn").click() }, "Download")));
+    return;
+  }
   const parts = [el("span", { class: "big" }, state.plies.length + " half-moves read")];
   parts.push(el("span", {}, c.ok + " ok"));
   if (c.check) parts.push(el("span", {}, el("span", { class: "dot check legend" }), c.check + " to check"));
@@ -266,7 +287,7 @@ function moveCell(i) {
   const p = state.res.plies[i];
   if (!p) return el("td");
   const shown = p.san_sv || p.text || "…";
-  const showRaw = p.text && p.san_sv && normalise(p.text) !== normalise(p.san_sv);
+  const showRaw = p.text && p.san_sv && p.text !== p.san && normalise(p.text) !== normalise(p.san_sv);
   return el("td", {
     class: "ply " + statusClass(p) + (i === state.selected ? " selected" : ""),
     title: p.hint || "",
@@ -342,6 +363,15 @@ function renderEditor() {
       el("button", { onclick: () => insertPly(0) }, "Add a move"));
     return;
   }
+  if (state.justFinished && isReady()) {
+    box.replaceChildren(el("div", { class: "done" },
+      el("h3", {}, "✓ All done"),
+      el("p", {}, "Every move is checked. The game is ready to copy, download or open in Lichess."),
+      el("div", { class: "row" },
+        el("button", { class: "primary", onclick: () => $("#copy-btn").click() }, "Copy PGN"),
+        el("button", { onclick: () => $("#lichess-btn").click() }, "Open in Lichess"))));
+    return;
+  }
   const parts = [];
   parts.push(el("h3", {}, "Move " + plyLabel(i) + " (" + (plyColor(i) === "white" ? "White" : "Black") + ")"));
   const changed = p.san_sv && normalise(p.text) !== normalise(p.san_sv);
@@ -361,11 +391,22 @@ function renderEditor() {
         el("button", { class: "small", onclick: () => select(s.index) }, "Show that move")));
   }
 
+  // A move the app is sure of (or you confirmed): nothing to do, so the tools
+  // to change it are folded away.
+  const fine = p.status === "ok";
+  const tools = fine ? el("details", { class: "change" }, el("summary", {}, "Change this move")) : null;
+  const add = (node) => (tools ? tools.append(node) : parts.push(node));
+  if (fine) {
+    parts.push(el("div", { class: "fine" }, "✓ This move is fine" +
+      (p.confirmed ? " (you confirmed it)." : ".") +
+      (openIssues() ? " " + openIssues() + " other move" + (openIssues() > 1 ? "s" : "") + " to check." : "")));
+  }
+
   if (p.status === "pending") {
     parts.push(el("p", { class: "muted" }, "Fix the problem at move " + plyLabel(firstFail()) + " first; this move is checked after that."));
   } else if (p.legal.length) {
     const best = p.san;
-    parts.push(el("div", { class: "cands" },
+    add(el("div", { class: "cands" },
       p.candidates.map((c) => el("button", {
         class: c.san === best ? "best" : "",
         title: c.score === null ? "the next " + c.fits + " moves fit after this"
@@ -375,7 +416,7 @@ function renderEditor() {
     const select = el("select", { onchange: (e) => e.target.value && chooseMove(i, e.target.value) },
       el("option", { value: "" }, "All legal moves…"),
       p.legal.map((san) => el("option", { value: san }, san)));
-    parts.push(el("div", { class: "row" }, select,
+    add(el("div", { class: "row" }, select,
       p.status === "check" && p.san ? el("button", { class: "primary small", onclick: () => chooseMove(i, p.san) }, "✓ " + p.san_sv + " is right") : null));
   }
 
@@ -384,14 +425,15 @@ function renderEditor() {
   textInput.addEventListener("keydown", (e) => { if (e.key === "Enter") textInput.blur(); });
   const clockInput = el("input", { type: "text", class: "clock", value: p.clock, inputmode: "numeric", title: "Minutes left on the clock" });
   clockInput.addEventListener("change", () => { state.plies[i].clock = clockInput.value.replace(/\D/g, ""); reprocess(); });
-  parts.push(el("div", { class: "row" },
+  add(el("div", { class: "row" },
     el("label", {}, "Written ", textInput),
     el("label", {}, "Minutes left ", clockInput)));
 
-  parts.push(el("div", { class: "row" },
+  add(el("div", { class: "row" },
     el("button", { class: "small", onclick: () => insertPly(i), title: "Use when a move was not written down" }, "＋ Insert move before"),
     el("button", { class: "small", onclick: () => insertPly(i + 1) }, "＋ Insert after"),
     el("button", { class: "small", onclick: () => deletePly(i), title: "Use when something that isn't a move was read" }, "✕ Delete this move")));
+  if (tools) parts.push(tools);
   box.replaceChildren(...parts);
 }
 
@@ -560,6 +602,7 @@ document.addEventListener("keydown", (e) => {
 
 // ---------- Editing ----------
 function select(i) {
+  state.justFinished = false;
   state.selected = Math.max(0, Math.min(i, state.plies.length - 1));
   renderMoves();
   renderBoard();
@@ -572,7 +615,7 @@ function chooseMove(i, san) {
   state.plies[i].confirmed = true;
   reprocess(() => {
     const next = firstIssue(i);
-    state.selected = next ?? Math.min(i + 1, state.plies.length - 1);
+    state.selected = next ?? i;
   });
 }
 

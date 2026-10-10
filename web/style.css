@@ -220,3 +220,15 @@ textarea#pgn { width: 100%; min-height: 220px; font: 13px/1.4 ui-monospace, Cons
              background: var(--card); color: var(--text); flex: 1 1 260px; min-width: 0; }
 #settings code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
 details summary { cursor: pointer; color: var(--muted); }
+
+/* "All checked" state */
+.summary.ready { background: color-mix(in srgb, var(--ok) 14%, var(--card)); border-color: var(--ok); }
+.summary .ready-text { font-weight: 700; color: var(--ok); font-size: 1.05rem; }
+.summary .ready-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.editor .done { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--ok);
+                background: color-mix(in srgb, var(--ok) 12%, var(--card)); }
+.editor .done h3 { color: var(--ok); }
+.editor .fine { color: var(--ok); margin: 6px 0; }
+.editor details.change { margin-top: 6px; }
+.editor details.change summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+#next-issue-btn:disabled { opacity: 0.6; }

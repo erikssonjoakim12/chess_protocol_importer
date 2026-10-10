@@ -11,7 +11,14 @@
 // later. If another reading of an earlier move makes the rest of the game fit,
 // that is offered as a suggestion.
 import { Chess } from "../vendor/chess.js";
-import { cmp, handwrittenKey, sanToSwedish, similarity } from "./notation.js";
+import { cmp, handwrittenKey as keyIn, notation, sanToLocal, similarity as similarityIn } from "./notation.js";
+
+// The notation of the sheet being resolved (notations.js). Set at the start of
+// resolve(); everything below matches handwriting in that notation.
+let nt = notation();
+const handwrittenKey = (text) => keyIn(text, nt);
+const local = (san) => sanToLocal(san, nt);
+const similarity = (a, b, mirror) => similarityIn(a, b, mirror, nt);
 
 export const STATUS_OK = "ok";            // exact match, or confirmed by the user
 export const STATUS_CHECK = "check";      // best guess, please review
@@ -106,16 +113,16 @@ function flipTurn(fen) {
 
 /** [strictKey, looseKeys] for a legal move, in Swedish form. */
 function moveKeys(move) {
-  const strict = handwrittenKey(sanToSwedish(move.san));
+  const strict = handwrittenKey(local(move.san));
   const loose = new Set();
   if (move.castling) return [strict, loose];
   let promo = "";
-  if (move.promotion) promo = sanToSwedish("=" + move.promotion.toUpperCase()).slice(1);
+  if (move.promotion) promo = local("=" + move.promotion.toUpperCase()).slice(1);
   if (move.piece === "p") {
     loose.add(move.to + promo);
     loose.add(move.from + move.to + promo);
   } else {
-    const letter = sanToSwedish(move.piece.toUpperCase());
+    const letter = local(move.piece.toUpperCase());
     loose.add(letter + move.to);
     loose.add(letter + move.from + move.to);
   }
@@ -150,7 +157,7 @@ const RANK_CACHE_MAX = 200000;
 
 /** All legal moves, best match first: [{score, move}], move as from legalMoves(). */
 export function rankMoves(fen, text, alternatives = []) {
-  const key = fen + "\u0000" + (text || "") + "\u0000" + (alternatives || []).join("\u0001");
+  const key = nt.id + "|" + fen + "\u0000" + (text || "") + "\u0000" + (alternatives || []).join("\u0001");
   let ranked = rankCache.get(key);
   if (!ranked) {
     const reads = readings(text || "", alternatives);
@@ -225,8 +232,8 @@ function suggestEarlierFix(plies, history, failIndex, lastNeeds = AUTO_FIX_SCORE
       if (fits) {
         const dots = turnOf(fen) === "w" ? "." : "...";
         return {
-          action: "replace", index: j, san: move.san, san_sv: sanToSwedish(move.san),
-          message: `If move ${moveNumberOf(fen)}${dots} was ${sanToSwedish(move.san)} instead of what ` +
+          action: "replace", index: j, san: move.san, san_local: local(move.san),
+          message: `If move ${moveNumberOf(fen)}${dots} was ${local(move.san)} instead of what ` +
                    `is written ('${text}'), the following moves fit.`,
         };
       }
@@ -270,7 +277,7 @@ function uniqueFit(fits, plies, start) {
 
 function fitCandidates(fits) {
   return fits.slice(0, MAX_CANDIDATES).map((f) =>
-    ({ san: f.move.san, san_sv: sanToSwedish(f.move.san), score: null, fits: f.n }));
+    ({ san: f.move.san, san_local: local(f.move.san), score: null, fits: f.n }));
 }
 
 /** How many following plies must fit to trust a choice made by looking ahead. */
@@ -301,7 +308,7 @@ function pickByFuture(plies, i, ranked, rivals) {
   }
   scored.sort((a, b) => b.total - a.total || cmp(a.move.san, b.move.san));
   const candidates = scored.slice(0, MAX_CANDIDATES).map((s) =>
-    ({ san: s.move.san, san_sv: sanToSwedish(s.move.san), score: round2(own.get(s.move.uci)), fits: s.n }));
+    ({ san: s.move.san, san_local: local(s.move.san), score: round2(own.get(s.move.uci)), fits: s.n }));
   const best = scored[0];
   const unique = best.n >= need && (scored.length === 1 || best.total - scored[1].total >= LOOKAHEAD_MARGIN);
   return { move: best.move, fits: best.n, unique, candidates };
@@ -315,8 +322,8 @@ function suggestInsert(fen, plies, i) {
   if (!best) return null;
   const side = turnOf(fen) === "w" ? "White" : "Black";
   return {
-    action: "insert", index: i, san: best.move.san, san_sv: sanToSwedish(best.move.san), fits: best.n,
-    message: `A move seems to be missing here. If ${side} played ${sanToSwedish(best.move.san)}, ` +
+    action: "insert", index: i, san: best.move.san, san_local: local(best.move.san), fits: best.n,
+    message: `A move seems to be missing here. If ${side} played ${local(best.move.san)}, ` +
              `the next ${best.n} moves fit.`,
   };
 }
@@ -335,7 +342,7 @@ function newEntry(i, ply, fen) {
     unclear: Boolean(ply.unclear),
     corrected: false,
     mirrored: false,
-    san: null, san_sv: null, uci: null,
+    san: null, san_local: null, uci: null,
     score: 0.0, candidates: [], legal: [], hint: null, suggestion: null,
     fen_before: fen, fen_after: null,
   };
@@ -345,9 +352,11 @@ function newEntry(i, ply, fen) {
  * Replay plies and pick a legal move for each.
  *
  * `plies` is a list of {text, alternatives?, clock?, unclear?, confirmed?
- * (the user picked this move)}. Returns the per-ply results and a summary.
+ * (the user picked this move)}; `notationId` the sheet's notation
+ * (notations.js, Swedish by default). Returns the per-ply results and a summary.
  */
-export function resolve(plies) {
+export function resolve(plies, notationId) {
+  nt = notation(notationId);
   let fen = START_FEN;
   const out = [];
   const history = [];
@@ -364,7 +373,7 @@ export function resolve(plies) {
     const ranked = rankMoves(fen, text, alts);
     entry.legal = ranked.map((r) => r.move.san).sort(cmp);
     entry.candidates = ranked.slice(0, MAX_CANDIDATES).map((r) =>
-      ({ san: r.move.san, san_sv: sanToSwedish(r.move.san), score: round2(r.score) }));
+      ({ san: r.move.san, san_local: local(r.move.san), score: round2(r.score) }));
     if (!ranked.length) {  // game already over (mate/stalemate) but more moves written
       entry.status = STATUS_FAIL;
       entry.hint = "The game is already over in this position.";
@@ -383,7 +392,7 @@ export function resolve(plies) {
     // Readings (e.g. from two models) that each fit a legal move exactly.
     const exact = exactReadings(fen, text, alts);
     const rivals = [...new Set(exact.values())].sort(cmp);
-    const san = () => sanToSwedish(bestMove.san);
+    const san = () => local(bestMove.san);
 
     if (!text && !alts.length) {
       // Nothing written: let the following moves decide.
@@ -467,7 +476,7 @@ export function resolve(plies) {
       } else if (rivals.length > 1) {
         entry.status = STATUS_CHECK;
         entry.hint = "The readings differ: " +
-          [...exact.entries()].map(([reading, s]) => `'${reading}' (${sanToSwedish(s)})`).join(" or ") +
+          [...exact.entries()].map(([reading, s]) => `'${reading}' (${local(s)})`).join(" or ") +
           ". Which one is right?";
       } else if (bestScore >= MIN_SCORE) {
         entry.status = STATUS_CHECK;
@@ -497,7 +506,7 @@ export function resolve(plies) {
     }
 
     entry.san = bestMove.san;
-    entry.san_sv = sanToSwedish(bestMove.san);
+    entry.san_local = local(bestMove.san);
     entry.uci = bestMove.uci;
     // Clearly read: OK, not auto-corrected, and the readings agreed.
     const certain = entry.status === STATUS_OK && !entry.corrected && !entry.unclear;

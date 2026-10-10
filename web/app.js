@@ -1,6 +1,8 @@
 // The page: photos in, review, PGN out. Everything runs in the browser; the
 // only outside services are Gemini (with the user's own key) and Lichess.
 import { GeminiReader } from "./core/gemini.js";
+import { NOTATIONS } from "./core/notations.js";
+import { sanToLocal } from "./core/notation.js";
 import { buildPgn } from "./core/pgn.js";
 import { processGame, startReview } from "./core/pipeline.js";
 import { getKey } from "./settings.js";
@@ -172,7 +174,8 @@ async function readScoresheet(careful) {
   }
 }
 
-/** Show a freshly read game (from photos or the example) for review. */
+/** Show a freshly read game (from photos or the example) for review.
+ *  The notation is detected from the moves (see detectNotation). */
 function beginReview(data) {
   state.headers = { ...data.headers, result: "" };  // "" = work out the result automatically
   state.endMarker = data.end_marker;
@@ -182,6 +185,9 @@ function beginReview(data) {
   }));
   state.notes = data.notes;
   state.headerFlags = new Set(data.header_flags || []);
+  state.notation = data.notation;
+  state.detectedNotation = data.detected_notation;
+  state.notationAuto = true;
   state.gameId = newGameId();
   state.lichess = null;
   state.study = null;
@@ -243,7 +249,7 @@ async function reprocess(then) {
   await new Promise((ok) => setTimeout(ok, 0));
   if (seq !== state.requestSeq) return;  // a newer edit is on its way
   const before = openIssues();
-  applyResponse(processGame(state.headers, state.plies, state.endMarker));
+  applyResponse(processGame(state.headers, state.plies, state.endMarker, state.notation));
   if (before > 0 && openIssues() === 0 && state.res.complete) state.justFinished = true;
   if (then) then();
   renderAll();
@@ -346,8 +352,8 @@ function scrollMoveIntoView() {
 function moveCell(i) {
   const p = state.res.plies[i];
   if (!p) return el("td");
-  const shown = p.san_sv || p.text || "…";
-  const showRaw = p.text && p.san_sv && p.text !== p.san && normalise(p.text) !== normalise(p.san_sv);
+  const shown = p.san_local || p.text || "…";
+  const showRaw = p.text && p.san_local && p.text !== p.san && normalise(p.text) !== normalise(p.san_local);
   return el("td", {
     class: "ply " + statusClass(p) + (i === state.selected ? " selected" : ""),
     title: p.hint || "",
@@ -438,19 +444,19 @@ function renderEditor() {
     el("h3", {}, "Move " + plyLabel(i) + " (" + (plyColor(i) === "white" ? "White" : "Black") + ")"),
     photo ? el("button", { class: "small", title: "Look at the handwriting", onclick: () => openLightbox(photo.url) },
       "📷 See photo" + (state.photos.length > 1 ? " (page " + (state.photos.indexOf(photo) + 1) + ")" : "")) : null));
-  const changed = p.san_sv && normalise(p.text) !== normalise(p.san_sv);
+  const changed = p.san_local && normalise(p.text) !== normalise(p.san_local);
   parts.push(el("div", { class: "muted" }, "Written: ",
     el("span", { class: "read-as" }, p.text || "(nothing)"),
     p.alternatives.length ? "  or maybe " + p.alternatives.join(", ") : "",
-    changed ? el("span", {}, "  →  ", el("b", {}, p.san_sv)) : "",
-    p.san && p.san !== p.san_sv ? el("span", {}, "  (English: " + p.san + ")") : ""));
+    changed ? el("span", {}, "  →  ", el("b", {}, p.san_local)) : "",
+    p.san && p.san !== p.san_local ? el("span", {}, "  (PGN: " + p.san + ")") : ""));
 
   if (p.hint) parts.push(el("div", { class: "hint" + (p.status === "fail" ? " fail" : "") }, p.hint));
   if (p.suggestion) {
     const s = p.suggestion;
     parts.push(el("div", { class: "suggestion" }, "💡 " + s.message + " ",
       el("button", { class: "small primary", onclick: () => applySuggestion(s) },
-        (s.action === "insert" ? "Insert " : "Use ") + s.san_sv),
+        (s.action === "insert" ? "Insert " : "Use ") + s.san_local),
       s.action === "insert" ? null :
         el("button", { class: "small", onclick: () => select(s.index) }, "Show that move")));
   }
@@ -476,12 +482,12 @@ function renderEditor() {
         title: c.score === null ? "the next " + c.fits + " moves fit after this"
                                 : "match " + Math.round(c.score * 100) + "%",
         onclick: () => chooseMove(i, c.san),
-      }, c.san_sv))));
+      }, c.san_local))));
     const select = el("select", { onchange: (e) => e.target.value && chooseMove(i, e.target.value) },
       el("option", { value: "" }, "All legal moves…"),
-      p.legal.map((san) => el("option", { value: san }, san)));
+      p.legal.map((san) => el("option", { value: san }, sanToLocal(san, NOTATIONS[state.notation]))));
     add(el("div", { class: "row" }, select,
-      p.status === "check" && p.san ? el("button", { class: "primary small", onclick: () => chooseMove(i, p.san) }, "✓ " + p.san_sv + " is right") : null));
+      p.status === "check" && p.san ? el("button", { class: "primary small", onclick: () => chooseMove(i, p.san) }, "✓ " + p.san_local + " is right") : null));
   }
 
   const textInput = el("input", { type: "text", value: p.text, size: 8, title: "Edit what's written (Swedish or English notation)" });
@@ -543,6 +549,17 @@ function renderTags() {
     RESULTS.map((r) => el("option", { value: r, selected: state.headers.result === r }, r)));
   result.addEventListener("change", () => { state.headers.result = result.value; reprocess(); });
   fields.push(el("label", {}, "Result", result));
+  const detected = NOTATIONS[state.detectedNotation] || NOTATIONS.swedish;
+  const notationSelect = el("select", { id: "tag-notation", title: "The piece letters used on the scoresheet" },
+    el("option", { value: "auto", selected: state.notationAuto }, "Automatic (detected: " + detected.name + ")"),
+    Object.values(NOTATIONS).map((nt) => el("option", { value: nt.id, selected: !state.notationAuto && state.notation === nt.id },
+      nt.name + " (" + Object.values(nt.pieces).join(" ") + ")" + (nt.note ? ", " + nt.note : ""))));
+  notationSelect.addEventListener("change", () => {
+    state.notationAuto = notationSelect.value === "auto";
+    state.notation = state.notationAuto ? state.detectedNotation : notationSelect.value;
+    reprocess();
+  });
+  fields.push(el("label", {}, "Notation on the sheet", notationSelect));
   form.replaceChildren(...fields);
   const notes = $("#notes");
   notes.hidden = !state.notes;
@@ -908,6 +925,7 @@ function saveCurrentGame() {
     review: {
       headers: state.headers, plies: state.plies, endMarker: state.endMarker,
       notes: state.notes || "", headerFlags: [...(state.headerFlags || [])],
+      notation: state.notation, detectedNotation: state.detectedNotation, notationAuto: state.notationAuto,
     },
   };
   storeGames([record, ...list.filter((g) => g.id !== state.gameId)]);
@@ -938,6 +956,8 @@ function openSaved(id) {
     headers: { ...g.review.headers }, plies: g.review.plies.map((p) => ({ ...p })),
     endMarker: g.review.endMarker, notes: g.review.notes,
     headerFlags: new Set(g.review.headerFlags || []), selected: 0,
+    notation: g.review.notation || "swedish", detectedNotation: g.review.detectedNotation || "swedish",
+    notationAuto: g.review.notationAuto !== false,
   });
   renderThumbs();
   reprocess(() => {

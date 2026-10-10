@@ -22,8 +22,8 @@ const RETRY_PAUSES_MS = [3000, 10000];  // before the 2nd and 3rd attempt on the
 const MAX_OUTPUT_TOKENS = 12000;
 
 export const PROMPT = `\
-The images are photos of a handwritten chess scoresheet ("protokoll") from a \
-Swedish tournament: the pages of ONE game, in order.
+The images are photos of a handwritten chess scoresheet ("protokoll"), usually \
+from a Swedish tournament: the pages of ONE game, in order.
 
 Transcribe exactly what is written. Do NOT correct, complete or improve the \
 moves; a chess engine checks every move afterwards, so a faithful raw reading \
@@ -31,15 +31,17 @@ is what matters, including mistakes. When a cell is hard to read, give your \
 best reading in "move", other plausible readings in "alternatives", and set \
 "unclear" to true.
 
-NOTATION. Swedish algebraic: K = kung (king), D = dam (queen), T = torn (rook), \
-L = löpare (bishop), S = springare (knight); pawn moves have no letter. \
-x = capture, + = check, 0-0 / 0-0-0 = castling. Keep the Swedish letters.
+NOTATION. Usually Swedish algebraic: K = kung (king), D = dam (queen), T = torn \
+(rook), L = löpare (bishop), S = springare (knight); pawn moves have no letter. \
+x = capture, + = check, 0-0 / 0-0-0 = castling. Some sheets are in another \
+language, e.g. English (K Q R B N) or German (K D T L S). Copy the piece \
+letters exactly as written; never translate them into another language.
 
 LAYOUT. Forms differ a lot, so look at the layout before transcribing.
 - First fill in "layout": for each page, how many blocks of columns there \
 are (e.g. 1-20, 21-40, 41-60) and the left-to-right order of the columns in \
 a block, e.g. "number | Vit | Svart" or "Vit | number | Svart".
-- Every row has a white ("Vit") move AND a black ("Svart") move, except \
+- Every row has a white ("Vit"/"White") move AND a black ("Svart"/"Black") move, except \
 perhaps the last row of the game. The black column is often shaded grey, and \
 on some forms the move number is printed BETWEEN the white and the black \
 column, so black's move is to the right of the number. Never skip the black \
@@ -56,7 +58,8 @@ move, after a slash: "/42", "/5", "/0". Put only the number in "clock" \
 ("42"). A slash and number is never part of the move.
 
 GAME END. Words like "uppg." (resigned), "remi" (draw), "tid" / "tid." (lost \
-on time) or a result like "1-0" written in a move cell are not moves. Report \
+on time), the same words in other languages ("resigns", "draw", "time") or a \
+result like "1-0" written in a move cell are not moves. Report \
 the first one in "end_marker" (text, the column it is in, and the move number \
 of its row) and leave it out of the moves. Ignore signatures.
 
@@ -70,13 +73,13 @@ that names the tournament (e.g. "Höstturneringen 2025"). Not the club that \
 printed the form.
 - date: as YYYY.MM.DD. Swedish dates are day/month, so "8/10" is 8 October. \
 Use ?? for unknown parts. date_raw: the date exactly as written.
-- round ("Rond"), board ("Bord"), group ("Grupp"/"Klass").
+- round ("Rond"/"Round"), board ("Bord"/"Board"), group ("Grupp"/"Klass"/"Section").
 - white / black: the players' names. white_elo / black_elo: rating \
-("R-tal", "Rat", "Elo"), digits only. white_team / black_team: club \
-("Klubb"). Some forms have club and rating on the line under the name with \
-no label.
-- time_control: as written ("Tid", "Dragserie", "Betänketid").
-- white_score / black_score: the points boxes ("Poäng"): "1", "0" or "½".
+("R-tal", "Rat", "Elo", "Rating"), digits only. white_team / black_team: club \
+("Klubb"/"Club"/"Team"). Some forms have club and rating on the line under \
+the name with no label.
+- time_control: as written ("Tid", "Dragserie", "Betänketid", "Time control").
+- white_score / black_score: the points boxes ("Poäng"/"Score"): "1", "0" or "½".
 - site: the place, only if stated.
 Put anything else worth knowing (e.g. moves written in the wrong column) in \
 "notes".

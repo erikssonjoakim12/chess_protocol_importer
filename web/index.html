@@ -5,15 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Protokoll → PGN</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
-    <h1>Protokoll <span class="arrow">→</span> PGN</h1>
-    <p class="tagline">Photo of a scoresheet in, Lichess-ready PGN out.</p>
+    <div>
+      <h1>Protokoll <span class="arrow">→</span> PGN</h1>
+      <p class="tagline">Photo of a scoresheet in, Lichess-ready PGN out.</p>
+    </div>
+    <button id="settings-btn" class="small" title="Gemini key">⚙ Settings</button>
   </header>
 
   <main>
+    <!-- The user's own Gemini key -->
+    <section id="settings" class="card" hidden>
+      <h2>Gemini key</h2>
+      <p class="muted small-text">The app reads the handwriting with Google's Gemini AI, using your own free key.
+        The key is kept only in this browser, and the photos go straight from here to Google.</p>
+      <div id="key-connected" hidden>
+        <p>✓ Connected with key <code id="key-masked"></code>
+          <button id="key-change" class="small">Change</button>
+          <button id="key-remove" class="small link">Remove</button></p>
+      </div>
+      <div id="key-setup">
+        <ol class="steps">
+          <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>
+            and sign in with your Google account.</li>
+          <li>Click <b>Create API key</b> and copy the key.</li>
+          <li>Paste it here:</li>
+        </ol>
+        <div class="actions">
+          <input id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Your Gemini key">
+          <button id="key-show" class="small" type="button">Show</button>
+          <button id="key-save" class="primary" type="button">Save</button>
+        </div>
+      </div>
+      <p id="key-status" class="muted"></p>
+      <details class="small-text">
+        <summary>Free? Safe?</summary>
+        <p>The free tier is enough for reading your games; no credit card is needed. On the free tier Google may
+          use what you send to improve its products.</p>
+        <p>Treat the key like a password: don't share it. For extra safety, in Google Cloud you can restrict
+          the key to the "Generative Language API" and to this website's address, so a copied key is useless
+          anywhere else.</p>
+      </details>
+    </section>
+
     <!-- Games read earlier, kept on this device -->
     <section id="saved" class="card" hidden>
       <h2>Saved games</h2>
@@ -37,6 +74,7 @@
       <div class="actions">
         <button id="read-btn" class="primary" disabled>Read scoresheet</button>
         <button id="read-careful-btn" disabled title="Slower (1-2 minutes) but reads more carefully. Use it if the fast reading has many mistakes.">Read carefully (slower)</button>
+        <button id="demo-btn" class="link" type="button" title="See how it works without photos or a key">Try the example game</button>
         <span id="read-status" class="muted"></span>
       </div>
       <p id="read-error" class="error" hidden></p>
@@ -113,7 +151,7 @@
     </div>
     <div class="lb-help">Scroll or pinch to zoom · drag to move · Esc to close</div>
   </div>
-  <script src="/static/app.js"></script>
-  <script src="/static/library.js"></script>
+  <script type="module" src="app.js"></script>
+  <script type="module" src="settings.js"></script>
 </body>
 </html>

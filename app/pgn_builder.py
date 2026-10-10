@@ -131,7 +131,9 @@ def build_tags(headers, result):
     values["black_elo"] = re.sub(r"\D", "", headers.get("black_elo") or "")
     tags = []
     for tag, key in TAG_ORDER:
-        value = (values.get(key) or "").strip()
+        # A double quote or backslash inside a tag value is read differently by
+        # different PGN readers, so avoid them altogether.
+        value = (values.get(key) or "").strip().replace('"', "'").replace("\\", "/")
         if tag == "Date" and not value:
             value = "????.??.??"
         if value or tag in REQUIRED:

@@ -7,3 +7,6 @@ __pycache__/
 # Real scoresheets and games: private test data, never committed.
 example_protocols/
 tests/private/
+
+# Node
+node_modules/

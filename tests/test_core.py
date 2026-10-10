@@ -334,7 +334,7 @@ def test_two_readings_prefer_the_value_they_agree_on():
 def test_quotes_in_tags_keep_pgn_valid():
     pgn = process({"white": 'Anna "Annie" Andersson'}, [])["pgn"]
     game = chess.pgn.read_game(io.StringIO(pgn))
-    assert game.headers["White"] == 'Anna "Annie" Andersson'
+    assert game.headers["White"] == "Anna 'Annie' Andersson"
 
 
 def test_row_with_only_black_move_keeps_colours_in_step():
@@ -382,23 +382,6 @@ def test_conflicting_result_warns():
     result, warning = derive_result({"white_score": "1", "black_score": "0"},
                                     {"text": "uppg.", "column": "white"})
     assert result == "1-0" and warning
-
-
-def test_api_read_and_process(monkeypatch):
-    monkeypatch.setenv("READER", "mock")
-    from app.main import app
-    client = TestClient(app)
-    res = client.post("/api/read", files=[("files", ("p1.jpg", b"fake", "image/jpeg"))])
-    assert res.status_code == 200
-    data = res.json()
-    assert data["headers"]["white"] == "Paul Morphy"
-    assert data["pgn"].rstrip().endswith("17. Rd8# 1-0")
-
-    plies = [{"text": p["text"], "clock": p["clock"]} for p in data["resolution"]["plies"]]
-    del plies[1]  # drop 1...e5: everything after should shift and fail
-    res = client.post("/api/process", json={"headers": data["headers"], "plies": plies})
-    assert res.status_code == 200
-    assert not res.json()["resolution"]["complete"]
 
 
 def test_read_photos_with_mock_reader():

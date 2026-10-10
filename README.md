@@ -1,21 +1,25 @@
 # Protokoll → PGN
 
 Take a photo of a handwritten chess scoresheet in Swedish notation and get a
-PGN ready to paste into a Lichess study: moves, clock times and game details
-(players, ratings, clubs, event, round, board, date, result).
+PGN ready for Lichess: moves, clock times and game details (players, ratings,
+clubs, event, round, board, date, result).
+
+The app runs entirely in the browser. It reads the handwriting with Google
+Gemini using **your own free Gemini key**, which is kept only in your browser;
+photos go straight from your device to Google. There is no server.
 
 ## How it works
 
-1. **Reading.** The photos go to a vision AI (Google Gemini, free tier). It
-   transcribes what is written, mistakes included: moves in Swedish notation,
-   clock times (`/42` = 42 minutes left), and the form's header fields.
+1. **Reading.** Gemini transcribes what is written, mistakes included: moves in
+   Swedish notation, clock times (`/42` = 42 minutes left), and the form's
+   header fields.
    - **Read scoresheet** (fast, ~10-20 s): two fast models read every page at
      the same time, pages in parallel. Where the two readings differ, the
      chess engine decides, or asks you.
    - **Read carefully** (~1-1.5 min): models that think before answering.
-     Use it when the fast reading needs many corrections. Note that a
-     misreading that is *also a legal move* can only be caught by reading
-     better, not by the chess rules.
+     Use it when the fast reading needs many corrections. A misreading that
+     is *also a legal move* can only be caught by reading better, not by the
+     chess rules.
 2. **Checking.** The game is replayed move by move. Each handwritten move is
    matched against the legal moves in the position, allowing for typical
    slips: look-alike characters (4/9, 1/7, S/5, c/e…) and mirrored squares
@@ -26,8 +30,8 @@ PGN ready to paste into a Lichess study: moves, clock times and game details
    the game is replayed instantly. When a move turns out to be impossible, the
    app also checks whether a *different* reading of an earlier move makes
    everything fit, and suggests it.
-4. **Output.** Copy the PGN or download it. In Lichess: Study → Add chapter →
-   PGN → paste. Or click **Open in Lichess**: it creates a Lichess game page
+4. **Output.** Copy the PGN or download it (Lichess: Study → Add chapter →
+   PGN → paste). Or click **Open in Lichess**: it creates a Lichess game page
    (board, moves, analysis, clocks) with a link you can share. No login is
    needed, but the game is public to anyone with the link.
 5. **Saved games.** Every game you read is kept in the browser on that device,
@@ -37,62 +41,56 @@ PGN ready to paste into a Lichess study: moves, clock times and game details
 Two-page games: add both photos, page 1 first. It doesn't matter whether page 2
 is numbered from 41/61 or restarts at 1.
 
-## Setup (Windows)
+## Your Gemini key
 
-You need Python 3.9 or newer.
+The first time, the app asks for a key:
 
-```powershell
-py -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-copy .env.example .env
-```
-
-Get a free Gemini API key (it is personal: keep it in `.env`, never share it
-or put it in a public app):
-
-1. Go to <https://aistudio.google.com/apikey> and sign in with a Google account.
+1. Open <https://aistudio.google.com/apikey> and sign in with a Google account.
 2. Click **Create API key** and copy it.
-3. Paste it after `GEMINI_API_KEY=` in `.env`.
+3. Paste it into the app. It is checked with Google and kept in this browser.
 
-No credit card is needed for the free tier. Note that on the free tier Google
-may use what you send to improve its products. For scoresheets that is
-probably fine, but it's worth knowing.
+No credit card is needed for the free tier. On the free tier Google may use
+what you send to improve its products. Treat the key like a password.
 
-## Running
+## Running it on your computer
 
-Double-click `start.bat`, or:
+Browsers don't run apps straight from a folder, so a tiny local file server is
+included. Double-click `start.bat`, or:
 
 ```powershell
 .venv\Scripts\python run.py          # opens http://127.0.0.1:8000
-.venv\Scripts\python run.py --lan    # also open it from your phone on the same Wi-Fi
-.venv\Scripts\python run.py --mock   # try the UI without an API key (example game)
+.venv\Scripts\python run.py --lan    # also reachable from your phone on the same Wi-Fi
 ```
 
-Tests: `.venv\Scripts\python -m pytest`
+Any static file server pointed at `web/` works too. "Try the example game"
+shows the app without photos or a key.
 
-## Clock times
-
-A number after a slash next to a move is read as *minutes left* after that
-move and becomes a Lichess clock comment (`[%clk 0:42:00]`), shown in the
-study's move list. `/0` means under a minute and is stored as 30 seconds.
-
-## Project layout
+## Development
 
 ```
-app/
-  readers/      photo -> raw transcription. gemini.py, mock.py; add new readers here
-  notation.py   Swedish/English notation, look-alike and mirror rules
-  resolver.py   replays the game, matches handwriting to legal moves, suggestions
-  pgn_builder.py tags, result, time control, clock comments, PGN text
-  service.py    the pipeline
-  main.py       web server (FastAPI)
-static/         the web page
-tests/          tests; fixtures/ has a public demo game, private/ (not in git) real ones
+web/                 the app (plain HTML/CSS/JavaScript modules, no build step)
+  core/              notation, resolver, PGN, reading clean-up, Gemini reader
+  vendor/            chess.js (BSD), copied in by `npm run vendor`
+  pieces/            the cburnett chess pieces (BSD)
+  tests/             JavaScript tests; golden/ holds the expected answers
+app/                 the Python version: the reference the JavaScript is checked against
+scripts/             make_golden.py (answer keys), vendor.js
+tests/               Python tests; private/ (not in git) holds real scoresheets
 ```
 
-### Swapping the reader
+Tests (Node.js 22 or newer):
 
-Set `READER` in `.env`. To add one (another AI service, or a local model via
-Ollama), subclass `Reader` in `app/readers/`, return the reading format
-described in `app/readers/base.py`, and register it in
-`app/readers/__init__.py`.
+```powershell
+npm install
+npm test                                   # JavaScript, against the answer keys
+.venv\Scripts\python -m pytest             # Python reference
+.venv\Scripts\python scripts\make_golden.py  # regenerate the answer keys
+```
+
+The answer keys are produced by the Python version: public-domain games
+(Morphy's Opera Game, the Immortal and Evergreen games, random games) written
+with simulated handwriting slips, plus, locally only, real scoresheets. The
+JavaScript version must give exactly the same moves, flags, hints and PGN.
+
+Real scoresheets used for testing (`example_protocols/`, `tests/private/`) are
+private and never committed.

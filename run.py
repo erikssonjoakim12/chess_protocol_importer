@@ -1,15 +1,39 @@
-"""Start the app:  python run.py            (this computer only)
-                  python run.py --lan      (also reachable from your phone on the same Wi-Fi)
-                  python run.py --mock     (no API key needed: returns a saved example game)
+"""Open the app on this computer:  python run.py
+                                  python run.py --lan   (also from your phone on the same Wi-Fi)
+
+The app is just the files in web/ and runs entirely in the browser; this only
+serves those files locally (browsers don't run apps straight from a folder).
 """
 import argparse
+import functools
+import http.server
+import mimetypes
 import os
 import socket
 import threading
 import webbrowser
 
-import uvicorn
-from dotenv import load_dotenv
+WEB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+
+# Windows sometimes maps .js to text/plain, which browsers refuse for modules.
+mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("application/json", ".json")
+mimetypes.add_type("image/svg+xml", ".svg")
+mimetypes.add_type("application/manifest+json", ".webmanifest")
+
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
+                      ".js": "text/javascript", ".json": "application/json",
+                      ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json"}
+
+    def end_headers(self):
+        # Always the latest files while developing.
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
+    def log_message(self, *args):
+        pass
 
 
 def lan_ip():
@@ -24,25 +48,26 @@ def lan_ip():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Scoresheet photo to PGN")
+    parser = argparse.ArgumentParser(description="Serve the app locally")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--lan", action="store_true", help="listen on the local network too")
-    parser.add_argument("--mock", action="store_true", help="use the mock reader (no API calls)")
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
 
-    load_dotenv()
-    if args.mock:
-        os.environ["READER"] = "mock"
     host = "0.0.0.0" if args.lan else "127.0.0.1"
+    server = http.server.ThreadingHTTPServer((host, args.port), functools.partial(Handler, directory=WEB))
     url = "http://127.0.0.1:%d" % args.port
     print("\n  Open %s" % url)
     if args.lan:
         print("  From your phone (same Wi-Fi): http://%s:%d" % (lan_ip(), args.port))
-    print("  Reader: %s   (Ctrl+C to stop)\n" % os.environ.get("READER", "gemini"))
+        print("  (Some phone features, like installing the app, need the published https version.)")
+    print("  Close this window or press Ctrl+C to stop.\n")
     if not args.no_browser:
-        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    uvicorn.run("app.main:app", host=host, port=args.port, log_level="warning")
+        threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":

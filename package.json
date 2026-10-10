@@ -1,0 +1,14 @@
+{
+  "name": "chess-protocol-importer",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Photo of a handwritten chess scoresheet in, Lichess-ready PGN out. Runs in the browser.",
+  "type": "module",
+  "scripts": {
+    "vendor": "node scripts/vendor.js",
+    "test": "node --test \"web/tests/*.test.js\""
+  },
+  "devDependencies": {
+    "chess.js": "1.4.0"
+  }
+}

@@ -4,7 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Protokoll → PGN</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#2f6f4f">
+  <meta name="description" content="Photo of a handwritten chess scoresheet in, Lichess-ready PGN out.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Protokoll">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -69,6 +76,10 @@
         <input id="file-input" type="file" accept="image/*" multiple hidden>
         <span class="dz-main">Drop photos here or <u>choose files</u></span>
         <span class="muted">On a phone you can take the photo directly.</span>
+      </label>
+      <label class="camera-btn" title="Open the camera">
+        <input id="camera-input" type="file" accept="image/*" capture="environment" hidden>
+        📷 Take a photo
       </label>
       <ol id="thumbs" class="thumbs"></ol>
       <div class="actions">

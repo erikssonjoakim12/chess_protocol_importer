@@ -232,3 +232,8 @@ details summary { cursor: pointer; color: var(--muted); }
 .editor details.change { margin-top: 6px; }
 .editor details.change summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
 #next-issue-btn:disabled { opacity: 0.6; }
+
+/* Camera button: only on touch devices, where it opens the camera directly. */
+.camera-btn { display: none; margin-top: 10px; padding: 12px; text-align: center; border-radius: 10px;
+              background: var(--accent); color: var(--accent-text); font-weight: 600; cursor: pointer; }
+@media (pointer: coarse) { .camera-btn { display: block; } }

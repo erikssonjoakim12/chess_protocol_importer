@@ -50,6 +50,8 @@ const fileInput = $("#file-input");
 const dropzone = $("#dropzone");
 
 fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInput.value = ""; });
+const cameraInput = $("#camera-input");
+cameraInput.addEventListener("change", () => { addFiles(cameraInput.files); cameraInput.value = ""; });
 dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("over"); });
 dropzone.addEventListener("dragleave", () => dropzone.classList.remove("over"));
 dropzone.addEventListener("drop", (e) => {
@@ -116,6 +118,20 @@ async function readScoresheet(careful) {
   const buttons = [$("#read-btn"), $("#read-careful-btn")];
   const status = $("#read-status");
   const errorBox = $("#read-error");
+  if (!getKey()) {
+    // First time: show the key setup right here instead of an error.
+    $("#read-error").textContent = "First connect your free Gemini key (see above), then read the scoresheet.";
+    $("#read-error").hidden = false;
+    $("#settings").hidden = false;
+    $("#settings").scrollIntoView({ behavior: "smooth" });
+    $("#key-input").focus({ preventScroll: true });
+    return;
+  }
+  if (!navigator.onLine) {
+    $("#read-error").textContent = "You're offline. Reading a scoresheet needs internet; saved games work offline.";
+    $("#read-error").hidden = false;
+    return;
+  }
   if (state.res && !confirm("Read the photos again? The current game and your corrections stay in Saved games.")) return;
   buttons.forEach((b) => { b.disabled = true; });
   errorBox.hidden = true;
@@ -712,6 +728,12 @@ $("#lichess-btn").addEventListener("click", openInLichess);
 
 async function openInLichess() {
   const pgn = state.pgn;
+  if (!navigator.onLine) {
+    const box = $("#lichess-result");
+    box.replaceChildren(el("span", { class: "error" }, "You're offline. Opening in Lichess needs internet."));
+    box.hidden = false;
+    return;
+  }
   if (state.lichess && state.lichess.pgn === pgn) {
     window.open(state.lichess.url, "_blank", "noopener");
     renderLichessResult();
@@ -889,3 +911,10 @@ $("#export-all-btn").addEventListener("click", () => {
 });
 
 renderSaved();
+
+// ---------- Installable app, works offline ----------
+// The offline script keeps the app's own files on the device. Browsers only
+// allow it on https and on this computer (localhost).
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch((e) => console.warn("Offline support unavailable:", e));
+}

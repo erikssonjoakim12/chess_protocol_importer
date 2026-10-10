@@ -14,6 +14,16 @@
   </header>
 
   <main>
+    <!-- Games read earlier, kept on this device -->
+    <section id="saved" class="card" hidden>
+      <h2>Saved games</h2>
+      <p class="muted small-text">Kept in this browser on this device. Photos are not saved.</p>
+      <ul id="saved-list" class="saved-list"></ul>
+      <div class="actions">
+        <button id="export-all-btn" class="small">Download all as one .pgn</button>
+      </div>
+    </section>
+
     <!-- Step 1: photos -->
     <section id="upload" class="card">
       <h2>1. Photos of the scoresheet</h2>
@@ -37,7 +47,7 @@
       <div class="summary card" id="summary"></div>
 
       <div class="review-grid">
-        <div class="card board-card">
+        <div class="board-area">
           <div id="board" class="board" aria-label="Chess board"></div>
           <div class="board-nav">
             <button data-nav="start" title="Start">⏮</button>
@@ -45,22 +55,23 @@
             <button data-nav="next" title="Next (→)">▶</button>
             <button data-nav="end" title="End">⏭</button>
             <button id="flip-btn" title="Flip board">⇅</button>
-            <button id="next-issue-btn" class="small">Next to check</button>
           </div>
-          <div id="editor" class="editor"></div>
         </div>
 
-        <div class="card moves-card">
-          <h2>Moves</h2>
-          <p class="muted legend">
-            <span class="dot ok"></span>ok
-            <span class="dot corrected"></span>auto-corrected
-            <span class="dot check"></span>please check
-            <span class="dot fail"></span>problem
-          </p>
+        <div class="card side-card">
+          <div class="side-head">
+            <p class="muted legend">
+              <span class="dot ok"></span>ok
+              <span class="dot corrected"></span>auto-fixed
+              <span class="dot check"></span>check
+              <span class="dot fail"></span>problem
+            </p>
+            <button id="next-issue-btn" class="small">Next to check</button>
+          </div>
           <div id="moves-scroll" class="moves-scroll">
             <table id="moves" class="moves"></table>
           </div>
+          <div id="editor" class="editor"></div>
         </div>
 
         <div class="card photos-card">
@@ -83,9 +94,11 @@
         <div class="actions">
           <button id="copy-btn" class="primary">Copy</button>
           <button id="download-btn">Download .pgn</button>
+          <button id="lichess-btn" title="Creates a public game page on Lichess that you can share">Open in Lichess</button>
           <button id="restart-btn" class="link">Start over</button>
           <span id="copy-status" class="muted"></span>
         </div>
+        <div id="lichess-result" class="lichess-result" hidden></div>
       </div>
     </section>
   </main>
@@ -101,5 +114,6 @@
     <div class="lb-help">Scroll or pinch to zoom · drag to move · Esc to close</div>
   </div>
   <script src="/static/app.js"></script>
+  <script src="/static/library.js"></script>
 </body>
 </html>

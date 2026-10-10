@@ -27,7 +27,12 @@ PGN ready to paste into a Lichess study: moves, clock times and game details
    app also checks whether a *different* reading of an earlier move makes
    everything fit, and suggests it.
 4. **Output.** Copy the PGN or download it. In Lichess: Study → Add chapter →
-   PGN → paste.
+   PGN → paste. Or click **Open in Lichess**: it creates a Lichess game page
+   (board, moves, analysis, clocks) with a link you can share. No login is
+   needed, but the game is public to anyone with the link.
+5. **Saved games.** Every game you read is kept in the browser on that device,
+   with your corrections, so it never has to be read again. Photos are not
+   kept. "Download all" gives one .pgn file as a backup.
 
 Two-page games: add both photos, page 1 first. It doesn't matter whether page 2
 is numbered from 41/61 or restarts at 1.

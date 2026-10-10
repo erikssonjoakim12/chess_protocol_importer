@@ -103,7 +103,8 @@ def clean_header(key, value):
         m = re.search(r"\b(\d{3,4})\b", raw)
         return (m.group(1) if m else ""), bool(raw) and (not m or m.group(1) != raw)
     if key == "date":
-        m = re.search(r"\b(\d{4}|\?{4})[.\-/](\d{2}|\?\?)[.\-/](\d{2}|\?\?)\b", raw)
+        # Not \b: there is no word boundary next to "??" ("1858.??.??").
+        m = re.search(r"(?<!\d)(\d{4}|\?{4})[.\-/](\d{2}|\?\?)[.\-/](\d{2}|\?\?)(?!\d)", raw)
         return (".".join(m.groups()) if m else ""), bool(raw) and not m
     if key in _SHORT:
         return clean_text(raw, 12)

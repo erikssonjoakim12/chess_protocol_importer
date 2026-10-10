@@ -6,9 +6,6 @@
   --border: #ddd8cf;
   --accent: #2f6f4f;
   --accent-text: #fff;
-  --light-sq: #eeeed2;
-  --dark-sq: #769656;
-  --hl: rgba(255, 220, 60, 0.55);
   --ok: #3c9a5f;
   --corrected: #4a8fd8;
   --check: #e6a700;
@@ -98,40 +95,56 @@ button.link { border: none; background: none; color: var(--muted); text-decorati
 /* Review layout */
 .summary { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 .summary .big { font-weight: 700; }
-.review-grid { display: grid; grid-template-columns: minmax(280px, 420px) minmax(260px, 1fr) minmax(220px, 1fr); gap: 14px; align-items: start; }
-@media (max-width: 1050px) { .review-grid { grid-template-columns: minmax(280px, 420px) 1fr; } .photos-card { grid-column: 1 / -1; } }
-@media (max-width: 700px) { .review-grid { grid-template-columns: 1fr; } }
+/* Like the Lichess analysis board: a big board, the move list right next to
+   it in its own scroll box, the fix panel under the moves, photos on the right. */
+.review-grid { --board: min(600px, calc(100vh - 150px), 46vw);
+  display: grid; grid-template-columns: var(--board) minmax(280px, 1fr) minmax(220px, 0.8fr);
+  gap: 14px; align-items: start; }
 .review-grid .card { margin-bottom: 0; }
-/* Board and photos stay in view while scrolling (Lichess-style); the move
-   list scrolls inside its own box. */
-.board-card, .photos-card { position: sticky; top: 10px; }
-.photos-card { max-height: calc(100vh - 20px); overflow-y: auto; }
-.moves-card { display: flex; flex-direction: column; }
-.moves-scroll { position: relative; overflow-y: auto; max-height: calc(100vh - 140px); min-height: 240px;
-                border: 1px solid var(--border); border-radius: 6px; }
-@media (max-width: 1050px) { .photos-card { position: static; max-height: none; } }
+.board-area { position: sticky; top: 10px; }
+.side-card { display: flex; flex-direction: column; padding: 10px 12px; }
+.side-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.side-head .legend { margin: 0; font-size: 0.8rem; }
+.side-head #next-issue-btn { margin-left: auto; white-space: nowrap; flex: none; }
+.side-head .legend .dot { margin-left: 6px; }
+.moves-scroll { overflow-y: auto; height: calc(var(--board) * 0.55); min-height: 200px;
+                border: 1px solid var(--border); border-radius: 4px; }
+.photos-card { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; }
+@media (max-width: 1100px) {
+  .review-grid { --board: min(560px, calc(100vh - 150px), 55vw); grid-template-columns: var(--board) 1fr; }
+  .photos-card { grid-column: 1 / -1; position: static; max-height: none; }
+}
+/* Phone: board on top, the move list right under it, then the fix panel. */
 @media (max-width: 700px) {
-  .board-card { position: static; }
-  .moves-scroll { max-height: 45vh; }
+  .review-grid { --board: 100%; grid-template-columns: 1fr; gap: 8px; }
+  .board-area { position: static; }
+  main { padding-left: 8px; padding-right: 8px; }
+  .moves-scroll { height: auto; max-height: 30vh; min-height: 120px; }
+  .board-nav button { flex: 1; padding: 10px 0; font-size: 1.1rem; }
 }
 
-/* Board */
-.board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); aspect-ratio: 1; border-radius: 4px; overflow: hidden; user-select: none; }
-.sq { position: relative; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(9vw, 40px); line-height: 1; }
-.sq.light { background: var(--light-sq); }
-.sq.dark { background: var(--dark-sq); }
-.sq.hl::after { content: ""; position: absolute; inset: 0; background: var(--hl); }
-.sq .pc { position: relative; z-index: 1; }
-.sq .pc.w { color: #fff; text-shadow: 0 0 2px #000, 0 0 1px #000; }
-.sq .pc.b { color: #111; }
-.sq .coord { position: absolute; font-size: 10px; color: rgba(0,0,0,0.45); z-index: 1; }
-.sq .coord.file { right: 2px; bottom: 1px; }
-.sq .coord.rank { left: 2px; top: 1px; }
-.board-nav { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.board-nav #next-issue-btn { margin-left: auto; }
+/* Board: Lichess colours and pieces ("cburnett"). */
+.board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+         aspect-ratio: 1; width: 100%; user-select: none; touch-action: pan-y;
+         box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+.sq { position: relative; min-width: 0; min-height: 0; }
+.sq.light { background: #f0d9b5; }
+.sq.dark { background: #b58863; }
+.sq.last::before { content: ""; position: absolute; inset: 0; background: rgba(155, 199, 0, 0.41); }
+.sq.check::before { content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(255,0,0,1) 0%, rgba(231,0,0,1) 25%, rgba(169,0,0,0) 89%, rgba(158,0,0,0) 100%); }
+.sq .pc { position: absolute; inset: 0; background-size: 100% 100%; z-index: 1; }
+.sq .coord { position: absolute; font-size: clamp(8px, 1.9cqw, 12px); font-weight: 600; z-index: 2; line-height: 1; }
+.board { container-type: inline-size; }
+.sq.light .coord { color: #b58863; }
+.sq.dark .coord { color: #f0d9b5; }
+.sq .coord.file { right: 3%; bottom: 3%; }
+.sq .coord.rank { left: 4%; top: 4%; }
+.board-nav { display: flex; gap: 4px; margin-top: 6px; }
+.board-nav button { flex: 1; font-size: 1rem; }
 
 /* Editor */
-.editor { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+.editor { margin-top: 10px; }
 .editor h3 { margin: 0 0 4px; font-size: 1rem; }
 .editor .hint { padding: 6px 8px; border-radius: 6px; background: var(--check-bg); margin: 6px 0; }
 .editor .hint.fail { background: var(--fail-bg); }
@@ -154,7 +167,8 @@ button.link { border: none; background: none; color: var(--muted); text-decorati
 .moves td.ply.fail { border-left-color: var(--fail); background: var(--fail-bg); }
 .moves td.ply.pending { border-left-color: var(--pending); color: var(--muted); }
 .moves td.ply.selected { background: var(--selected); outline: 2px solid var(--corrected); outline-offset: -2px; }
-.moves td.ply:hover { background: var(--selected); }
+/* Only on devices with a real mouse: on phones a tap would leave it "hovered". */
+@media (hover: hover) { .moves td.ply:hover { background: var(--selected); } }
 .moves .san { font-weight: 600; }
 .moves .raw { color: var(--muted); font-size: 0.82rem; margin-left: 4px; }
 .moves .clk { color: var(--muted); font-size: 0.78rem; float: right; }
@@ -182,3 +196,18 @@ button.link { border: none; background: none; color: var(--muted); text-decorati
 
 /* PGN */
 textarea#pgn { width: 100%; min-height: 220px; font: 13px/1.4 ui-monospace, Consolas, monospace; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); resize: vertical; }
+
+/* Saved games */
+.small-text { font-size: 0.85rem; margin: 0 0 8px; }
+.saved-list { list-style: none; margin: 0; padding: 0; }
+.saved-list li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 0; border-top: 1px solid var(--border); }
+.saved-list li:first-child { border-top: none; }
+.saved-list .title { font-weight: 600; flex: 1 1 260px; min-width: 0; }
+.saved-list .meta { color: var(--muted); font-size: 0.85rem; }
+.saved-list .badge { font-size: 0.75rem; padding: 1px 7px; border-radius: 10px; background: var(--check-bg); }
+.saved-list .badge.done { background: transparent; color: var(--ok); }
+.saved-list a { color: var(--accent); }
+.lichess-result { margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: var(--selected);
+                  display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lichess-result a { color: inherit; font-weight: 600; word-break: break-all; }
+.no-photos { color: var(--muted); font-size: 0.9rem; }

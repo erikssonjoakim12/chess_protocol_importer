@@ -138,13 +138,18 @@ def _missing_move_hint(board, text, alternatives):
     return None
 
 
-def _suggest_earlier_fix(plies, history, fail_index, last_needs=AUTO_FIX_SCORE):
+def _suggest_earlier_fix(plies, history, fail_index, last_needs=AUTO_FIX_SCORE,
+                         question_certain=True):
     """Find an earlier ply whose other reading makes everything up to and
     including `fail_index` fit (that last ply scoring at least `last_needs`).
-    `history[j]` is (fen_before, chosen_uci) for the plies already played."""
+    `history[j]` is (fen_before, chosen_uci, certain) for the plies already
+    played. Clearly read (certain) moves are only questioned when
+    `question_certain`: when the later move really doesn't fit."""
     first = max(0, fail_index - BACKTRACK_PLIES)
     for j in range(fail_index - 1, first - 1, -1):
-        fen, chosen = history[j]
+        fen, chosen, certain = history[j]
+        if certain and not question_certain:
+            continue
         board = chess.Board(fen)
         text = plies[j].get("text") or ""
         alts = plies[j].get("alternatives") or []
@@ -449,12 +454,18 @@ def resolve(plies):
 
         if entry["status"] == STATUS_CHECK and text:
             # Would a different reading of an earlier move make this one exact?
-            entry["suggestion"] = _suggest_earlier_fix(plies, history, i, last_needs=LOOSE)
+            # A clearly read earlier move is only questioned if this one doesn't
+            # really fit (e.g. only after mirroring), not when it merely fits
+            # in more than one way ("Sd7": which knight?).
+            entry["suggestion"] = _suggest_earlier_fix(
+                plies, history, i, last_needs=LOOSE, question_certain=best_score < LOOSE)
 
         entry["san"] = best_san
         entry["san_sv"] = san_to_swedish(best_san)
         entry["uci"] = best_move.uci()
-        history.append((board.fen(), best_move.uci()))
+        # Clearly read: OK, not auto-corrected, and the readings agreed.
+        certain = entry["status"] == STATUS_OK and not entry["corrected"] and not entry["unclear"]
+        history.append((board.fen(), best_move.uci(), certain))
         board.push(best_move)
         entry["fen_after"] = board.fen()
 

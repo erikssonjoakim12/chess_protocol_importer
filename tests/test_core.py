@@ -294,6 +294,21 @@ def test_written_date_is_parsed_when_formatted_date_missing(raw, date):
     assert h["date"] == date
 
 
+def test_date_with_unknown_parts_is_kept():
+    r = normalize_reading({"headers": {"date": "1858.??.??"}})
+    assert r["headers"]["date"] == "1858.??.??" and "date" not in r["header_flags"]
+
+
+def test_clearly_read_earlier_move_is_not_questioned():
+    # Seen on the demo game: 11...Sd7 (which knight?) got the suggestion to
+    # change the clearly read 11.Lxb5+ into something else.
+    r = resolve(plies("e4", "e5", "Sf3", "d6", "d4", "Lg4", "dxe5", "Lxf3", "Dxf3", "dxe5",
+                      "Lc4", "Sf6", "Db3", "De7", "Sc3", "c6", "Lg5", "b5", "Sxb5", "cxb5",
+                      "Lxb5+", "Sd7"))
+    assert r["plies"][-1]["status"] == STATUS_CHECK
+    assert r["plies"][-1]["suggestion"] is None
+
+
 def test_formatted_date_disagreeing_with_handwriting_is_flagged():
     r = normalize_reading({"headers": {"date": "2024.10.08", "date_raw": "8/10 2026"}})
     assert "date" in r["header_flags"]

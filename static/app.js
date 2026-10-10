@@ -10,6 +10,8 @@ const state = {
   selected: 0,
   flipped: false,
   requestSeq: 0,
+  gameId: null,      // the saved-games entry this review belongs to
+  lichess: null,     // {url, pgn}: the Lichess game made from this PGN
 };
 
 const MAX_SIDE = 2400;     // downscale photos to this many pixels on the long side
@@ -110,7 +112,7 @@ async function readScoresheet(careful) {
   const buttons = [$("#read-btn"), $("#read-careful-btn")];
   const status = $("#read-status");
   const errorBox = $("#read-error");
-  if (state.res && !confirm("Read the photos again? Changes you made to the moves will be lost.")) return;
+  if (state.res && !confirm("Read the photos again? The current game and your corrections stay in Saved games.")) return;
   buttons.forEach((b) => { b.disabled = true; });
   errorBox.hidden = true;
   status.replaceChildren(el("span", { class: "spinner" }), " Reading the handwriting… " +
@@ -131,12 +133,12 @@ async function readScoresheet(careful) {
     }));
     state.notes = data.notes;
     state.headerFlags = new Set(data.header_flags || []);
+    state.gameId = newGameId();
+    state.lichess = null;
     applyResponse(data);
     state.selected = firstIssue() ?? 0;
-    $("#review").hidden = false;
-    renderTags();
-    renderAll();
-    renderPhotos();
+    showReview();
+    saveSoon();
     status.textContent = "Read with " + data.reader + ".";
     $("#review").scrollIntoView({ behavior: "smooth" });
   } catch (e) {
@@ -174,6 +176,15 @@ async function reprocess(then) {
   applyResponse(await resp.json());
   if (then) then();
   renderAll();
+  saveSoon();
+}
+
+function showReview() {
+  $("#review").hidden = false;
+  renderTags();
+  renderAll();
+  renderPhotos();
+  renderLichessResult();
 }
 
 // ---------- Rendering ----------
@@ -260,14 +271,15 @@ function moveCell(i) {
 
 const normalise = (s) => s.replace(/[+#x!?\s]/g, "").replace(/0/g, "O");
 
-const GLYPHS = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
-
 function renderBoard() {
   const p = state.res.plies[state.selected];
   const fen = p ? (p.fen_after || p.fen_before) : state.res.final_fen;
-  const placement = (fen || "8/8/8/8/8/8/8/8").split(" ")[0].split("/");
-  const highlight = new Set();
-  if (p && p.uci && p.fen_after) { highlight.add(p.uci.slice(0, 2)); highlight.add(p.uci.slice(2, 4)); }
+  const [placementField, turn] = (fen || "8/8/8/8/8/8/8/8 w").split(" ");
+  const placement = placementField.split("/");
+  // Last move highlight, and the king in check glowing red, as on Lichess.
+  const last = new Set();
+  if (p && p.uci && p.fen_after) { last.add(p.uci.slice(0, 2)); last.add(p.uci.slice(2, 4)); }
+  const inCheck = p && p.fen_after && /[+#]$/.test(p.san || "") ? (turn === "w" ? "K" : "k") : null;
   const squares = [];
   for (let r = 0; r < 8; r++) {
     const rank = state.flipped ? r : 7 - r;
@@ -276,10 +288,13 @@ function renderBoard() {
       const file = state.flipped ? 7 - f : f;
       const name = "abcdefgh"[file] + (rank + 1);
       const piece = row[file];
-      const sq = el("div", { class: "sq " + ((rank + file) % 2 ? "light" : "dark") + (highlight.has(name) ? " hl" : "") });
+      const classes = ["sq", (rank + file) % 2 ? "light" : "dark"];
+      if (last.has(name)) classes.push("last");
+      if (piece === inCheck) classes.push("check");
+      const sq = el("div", { class: classes.join(" ") });
       if (piece !== ".") {
-        const white = piece === piece.toUpperCase();
-        sq.append(el("span", { class: "pc " + (white ? "w" : "b") }, GLYPHS[piece.toLowerCase()] + "︎"));
+        const code = (piece === piece.toUpperCase() ? "w" : "b") + piece.toUpperCase();
+        sq.append(el("div", { class: "pc", style: "background-image:url(/static/pieces/" + code + ".svg)" }));
       }
       if (r === 7) sq.append(el("span", { class: "coord file" }, "abcdefgh"[file]));
       if (f === 0) sq.append(el("span", { class: "coord rank" }, rank + 1));
@@ -288,6 +303,22 @@ function renderBoard() {
   }
   $("#board").replaceChildren(...squares);
 }
+
+// Swipe on the board (phones) to step through the moves.
+(() => {
+  let start = null;
+  const board = $("#board");
+  board.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 1) start = [e.touches[0].clientX, e.touches[0].clientY];
+  }, { passive: true });
+  board.addEventListener("touchend", (e) => {
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start[0], dy = t.clientY - start[1];
+    start = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) select(state.selected + (dx < 0 ? 1 : -1));
+  });
+})();
 
 function expandRank(s) {
   return s.replace(/\d/g, (d) => ".".repeat(+d)).split("");
@@ -404,6 +435,11 @@ function renderTags() {
 }
 
 function renderPhotos() {
+  if (!state.photos.length) {
+    $("#photos").replaceChildren(el("p", { class: "no-photos" },
+      "Photos are not saved with the game. Add them again at the top if you need to look."));
+    return;
+  }
   $("#photos").replaceChildren(...state.photos.map((p) =>
     el("img", { src: p.url, alt: p.name, onclick: () => openLightbox(p.url) })));
 }
@@ -593,18 +629,23 @@ $("#copy-btn").addEventListener("click", async () => {
 $("#download-btn").addEventListener("click", () => {
   const h = state.headers;
   const name = [h.white, h.black, h.date].filter(Boolean).join("_").replace(/[^\p{L}\p{N}._-]+/gu, "-") || "game";
-  const url = URL.createObjectURL(new Blob([state.pgn], { type: "application/x-chess-pgn" }));
-  const a = el("a", { href: url, download: name + ".pgn" });
+  downloadText(name + ".pgn", state.pgn);
+});
+
+function downloadText(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: "application/x-chess-pgn" }));
+  const a = el("a", { href: url, download: name });
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
+}
 
 $("#restart-btn").addEventListener("click", () => {
-  if (!confirm("Start over with new photos?")) return;
+  if (!confirm("Start over with new photos? This game stays in Saved games.")) return;
   state.photos.forEach((p) => URL.revokeObjectURL(p.url));
-  Object.assign(state, { photos: [], plies: [], headers: {}, res: null, selected: 0 });
+  Object.assign(state, { photos: [], plies: [], headers: {}, res: null, selected: 0, gameId: null, lichess: null });
+  renderSaved();
   renderThumbs();
   $("#review").hidden = true;
   $("#read-status").textContent = "";

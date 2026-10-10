@@ -1,5 +1,0 @@
-# The Python version is the reference the browser version is checked against
-# (scripts/make_golden.py). The app itself needs no Python.
-chess==1.11.2
-python-dotenv==1.2.1
-pytest==8.4.2

@@ -6,8 +6,11 @@
   "description": "Photo of a handwritten chess scoresheet in, Lichess-ready PGN out. Runs in the browser.",
   "type": "module",
   "scripts": {
-    "vendor": "node scripts/vendor.js",
-    "test": "node --test \"web/tests/*.test.js\""
+    "start": "node scripts/serve.js",
+    "test": "node --test \"web/tests/*.test.js\"",
+    "golden": "node scripts/make_golden.js",
+    "benchmark": "node scripts/benchmark.js",
+    "vendor": "node scripts/vendor.js"
   },
   "devDependencies": {
     "chess.js": "1.4.0"

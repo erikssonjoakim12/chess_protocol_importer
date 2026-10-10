@@ -68,11 +68,12 @@ settings explain each step.
 ## Running it on your computer
 
 Browsers don't run apps straight from a folder, so a tiny local file server is
-included. Double-click `start.bat`, or:
+included (needs [Node.js](https://nodejs.org) 22 or newer). Double-click
+`start.bat`, or:
 
 ```powershell
-.venv\Scripts\python run.py          # opens http://127.0.0.1:8000
-.venv\Scripts\python run.py --lan    # also reachable from your phone on the same Wi-Fi
+npm start                     # opens http://127.0.0.1:8000
+node scripts/serve.js --lan   # also reachable from your phone on the same Wi-Fi
 ```
 
 Any static file server pointed at `web/` works too. "Try the example game"
@@ -82,28 +83,26 @@ shows the app without photos or a key.
 
 ```
 web/                 the app (plain HTML/CSS/JavaScript modules, no build step)
-  core/              notation, resolver, PGN, reading clean-up, Gemini reader
+  core/              notations, matching, resolver, PGN, reading clean-up, Gemini reader
   vendor/            chess.js (BSD), copied in by `npm run vendor`
   pieces/            the cburnett chess pieces (BSD)
-  tests/             JavaScript tests; golden/ holds the expected answers
-app/                 the Python version: the reference the JavaScript is checked against
-scripts/             make_golden.py (answer keys), vendor.js
-tests/               Python tests; private/ (not in git) holds real scoresheets
+  tests/             tests; golden/ holds the answer keys
+scripts/             serve.js, make_golden.js (answer keys), benchmark.js, vendor.js
+tests/private/       real scoresheets and their answers (not in git)
 ```
-
-Tests (Node.js 22 or newer):
 
 ```powershell
-npm install
-npm test                                   # JavaScript, against the answer keys
-.venv\Scripts\python -m pytest             # Python reference
-.venv\Scripts\python scripts\make_golden.py  # regenerate the answer keys
+npm install          # chess.js, for npm run vendor
+npm test             # all tests, including the answer keys
+npm run golden       # after a deliberate change in behaviour: update the answer keys, then review git diff
+npm run benchmark    # read real scoresheets with Gemini and count misreadings (needs .env and tests/private/)
 ```
 
-The answer keys are produced by the Python version: public-domain games
-(Morphy's Opera Game, the Immortal and Evergreen games, random games) written
-with simulated handwriting slips, plus, locally only, real scoresheets. The
-JavaScript version must give exactly the same moves, flags, hints and PGN.
+**Answer keys** (`web/tests/golden/`): scoresheet readings and exactly what the
+app must make of them: moves, flags, hints and PGN. They are public-domain
+games (Morphy's Opera Game, the Immortal and Evergreen games, random games)
+written with simulated handwriting slips, plus, locally only, real
+scoresheets. They were first produced by an earlier Python version of the app.
 
 Real scoresheets used for testing (`example_protocols/`, `tests/private/`) are
 private and never committed.

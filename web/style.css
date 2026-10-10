@@ -240,3 +240,6 @@ details summary { cursor: pointer; color: var(--muted); }
 
 .option { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 0.9rem; color: var(--muted); cursor: pointer; }
 .option input { margin-top: 3px; }
+
+.editor-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.photo-tip { margin: 8px 0 0; }

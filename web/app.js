@@ -94,6 +94,7 @@ function renderThumbs() {
     el("div", { class: "thumb-actions" },
       el("button", { title: "Move earlier", disabled: i === 0, onclick: () => movePhoto(i, -1) }, "◀"),
       el("button", { title: "Remove", onclick: () => removePhoto(i) }, "✕"),
+      el("button", { title: "Rotate a quarter turn", onclick: () => rotatePhoto(i) }, "↻"),
       el("button", { title: "Move later", disabled: i === state.photos.length - 1, onclick: () => movePhoto(i, 1) }, "▶"),
     ),
   )));
@@ -104,6 +105,24 @@ function movePhoto(i, delta) {
   const [p] = state.photos.splice(i, 1);
   state.photos.splice(i + delta, 0, p);
   renderThumbs();
+}
+
+/** Turn a photo a quarter turn clockwise (for photos taken sideways). */
+async function rotatePhoto(i) {
+  const photo = state.photos[i];
+  const bitmap = await createImageBitmap(photo.blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.height;
+  canvas.height = bitmap.width;
+  const ctx = canvas.getContext("2d");
+  ctx.translate(canvas.width, 0);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(bitmap, 0, 0);
+  const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", JPEG_QUALITY));
+  URL.revokeObjectURL(photo.url);
+  state.photos[i] = { ...photo, blob, url: URL.createObjectURL(blob) };
+  renderThumbs();
+  if (!$("#review").hidden) renderPhotos();
 }
 
 function removePhoto(i) {
@@ -412,7 +431,11 @@ function renderEditor() {
     return;
   }
   const parts = [];
-  parts.push(el("h3", {}, "Move " + plyLabel(i) + " (" + (plyColor(i) === "white" ? "White" : "Black") + ")"));
+  const photo = state.photos[Math.min((p.page || 1) - 1, state.photos.length - 1)];
+  parts.push(el("div", { class: "editor-head" },
+    el("h3", {}, "Move " + plyLabel(i) + " (" + (plyColor(i) === "white" ? "White" : "Black") + ")"),
+    photo ? el("button", { class: "small", title: "Look at the handwriting", onclick: () => openLightbox(photo.url) },
+      "📷 See photo" + (state.photos.length > 1 ? " (page " + (state.photos.indexOf(photo) + 1) + ")" : "")) : null));
   const changed = p.san_sv && normalise(p.text) !== normalise(p.san_sv);
   parts.push(el("div", { class: "muted" }, "Written: ",
     el("span", { class: "read-as" }, p.text || "(nothing)"),
